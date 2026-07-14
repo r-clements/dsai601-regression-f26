@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>OLS Fit Demo — DSAI 601</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      max-width: 760px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+      color: #222;
+    }
+    a.back { font-size: 0.9rem; color: #1a5fb4; text-decoration: none; }
+    h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+    p.instructions { color: #555; font-size: 0.95rem; margin-top: 0; }
+    #chart { border: 1px solid #ddd; border-radius: 4px; }
+    .point { fill: #1a5fb4; cursor: pointer; }
+    .point:hover { fill: #c01c28; }
+    .fit-line { stroke: #c01c28; stroke-width: 2; }
+    .residual { stroke: #999; stroke-dasharray: 3 3; }
+    #stats { font-size: 0.95rem; margin-top: 0.75rem; }
+    #stats span { font-weight: 600; }
+    button {
+      margin-top: 0.75rem;
+      padding: 0.4rem 0.8rem;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <a class="back" href="../../">&larr; All topics</a>
+  <h1>Ordinary Least Squares Fit</h1>
+  <p class="instructions">Click anywhere on the plot to add a data point. The line minimizes the sum of squared residuals (dashed).</p>
+  <div id="chart"></div>
+  <div id="stats">n = <span id="n">0</span> &nbsp;|&nbsp; slope = <span id="slope">–</span> &nbsp;|&nbsp; intercept = <span id="intercept">–</span> &nbsp;|&nbsp; SSR = <span id="ssr">–</span></div>
+  <button id="reset">Reset points</button>
+
+  <script src="app.js"></script>
+</body>
+</html>
