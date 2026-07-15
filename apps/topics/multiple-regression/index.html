@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Multiple Regression: 3D Plane Fit — DSAI 601</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      max-width: 820px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+      color: #222;
+    }
+    a.back { font-size: 0.9rem; color: #1a5fb4; text-decoration: none; }
+    h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+    p.instructions { color: #555; font-size: 0.95rem; margin-top: 0; }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1.25rem;
+      margin: 0.75rem 0 1.25rem;
+      padding: 0.75rem 1rem;
+      background: #f7f7f8;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    .controls label { display: flex; align-items: center; gap: 0.4rem; }
+    .controls button {
+      padding: 0.4rem 0.8rem;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    .controls input[type="range"] { width: 140px; }
+
+    #main-panel { border: 1px solid #ddd; border-radius: 4px; cursor: grab; }
+    #main-panel:active { cursor: grabbing; }
+
+    #stats { font-size: 0.95rem; margin: 0.6rem 0 1.25rem; }
+    #stats span { font-weight: 600; }
+
+    .point3d { fill: #1a5fb4; }
+    .plane-line { stroke: #c01c28; stroke-opacity: 0.55; fill: none; }
+    .axis3d { stroke: #999; stroke-width: 1; }
+    .axis3d-label { font-size: 0.8rem; fill: #555; }
+  </style>
+</head>
+<body>
+  <a class="back" href="../../">&larr; All topics</a>
+  <h1>Multiple Regression: 3D Plane Fit</h1>
+  <p class="instructions">
+    Drag anywhere on the plot to rotate the view. Points are two predictors (x&#8321;, x&#8322;) and an outcome (y);
+    the red wireframe is the OLS-fitted plane ŷ = b&#8320; + b&#8321;x&#8321; + b&#8322;x&#8322;.
+  </p>
+
+  <div class="controls">
+    <button id="regenerate">New simulated data</button>
+    <button id="reset-view">Reset view</button>
+    <label>Noise level
+      <input type="range" id="noise" min="0.2" max="3" step="0.1" value="1.2">
+    </label>
+  </div>
+
+  <div id="main-panel"></div>
+  <div id="stats">
+    n = <span id="n">0</span> &nbsp;|&nbsp;
+    ŷ = <span id="b0">–</span> + <span id="b1">–</span>·x&#8321; + <span id="b2">–</span>·x&#8322;
+    &nbsp;|&nbsp; R&sup2; = <span id="r2">–</span>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
