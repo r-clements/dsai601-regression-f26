@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Regression Diagnostics — DSAI 601</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      max-width: 980px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+      color: #222;
+    }
+    a.back { font-size: 0.9rem; color: #1a5fb4; text-decoration: none; }
+    h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+    p.instructions { color: #555; font-size: 0.95rem; margin-top: 0; }
+    .legend-swatch {
+      display: inline-block;
+      width: 0.6rem;
+      height: 0.6rem;
+      border-radius: 50%;
+      background: #c01c28;
+      margin: 0 0.25rem;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1.25rem;
+      margin: 0.75rem 0 1.25rem;
+      padding: 0.75rem 1rem;
+      background: #f7f7f8;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    .controls label { display: flex; align-items: center; gap: 0.4rem; cursor: pointer; }
+    .controls button {
+      padding: 0.4rem 0.8rem;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    #main-panel { border: 1px solid #ddd; border-radius: 4px; }
+    #stats { font-size: 0.95rem; margin: 0.6rem 0 1.25rem; }
+    #stats span { font-weight: 600; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    .cell {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 0.5rem 0.5rem 0.25rem;
+      transition: opacity 0.2s;
+    }
+    .cell h3 {
+      font-size: 0.95rem;
+      margin: 0 0 0.25rem 0.25rem;
+      color: #333;
+    }
+
+    .point { fill: #1a5fb4; cursor: grab; }
+    .point.notable { fill: #c01c28; }
+    .point:active { cursor: grabbing; }
+    .fit-line { stroke: #c01c28; stroke-width: 2; }
+    .ref-line { stroke: #999; stroke-dasharray: 4 3; }
+    .cooks-line { stroke: #e08a1e; stroke-dasharray: 2 2; fill: none; }
+    .qq-diag { stroke: #999; stroke-dasharray: 4 3; }
+    .diag-point { fill: #1a5fb4; }
+    .diag-point.notable { fill: #c01c28; }
+    .axis-label { font-size: 0.75rem; fill: #555; }
+  </style>
+</head>
+<body>
+  <a class="back" href="../../">&larr; All topics</a>
+  <h1>Regression Diagnostics</h1>
+  <p class="instructions">
+    Click empty space to add a point, drag a point to move it, double-click a point to remove it.
+    All four diagnostic plots below update live and share the same simulated dataset —
+    drag a point far from the cloud and watch its leverage and Cook's distance grow.
+    Points turn <span class="legend-swatch"></span><strong>red</strong> when their Cook's distance
+    exceeds 4/n, a common rule-of-thumb threshold for flagging unusually influential observations —
+    the same points are flagged in the stats line and stand out on the Residuals vs. Leverage plot.
+  </p>
+
+  <div class="controls">
+    <button id="regenerate">New simulated data</button>
+    <label><input type="checkbox" id="heteroscedastic"> Heteroscedastic errors</label>
+    <label><input type="checkbox" id="nonlinear"> Nonlinear relationship</label>
+    <label><input type="checkbox" id="skewed"> Skewed errors</label>
+  </div>
+
+  <div id="main-panel"></div>
+  <div id="stats">n = <span id="n">0</span> &nbsp;|&nbsp; slope = <span id="slope">–</span> &nbsp;|&nbsp; intercept = <span id="intercept">–</span> &nbsp;|&nbsp; flagged points (Cook's D &gt; 4/n) = <span id="flagged">0</span></div>
+
+  <div class="grid">
+    <div class="cell">
+      <h3>Residuals vs. Fitted</h3>
+      <div id="resid-fitted"></div>
+    </div>
+    <div class="cell">
+      <h3>Normal Q-Q</h3>
+      <div id="qq-plot"></div>
+    </div>
+    <div class="cell">
+      <h3>Scale-Location</h3>
+      <div id="scale-location"></div>
+    </div>
+    <div class="cell">
+      <h3>Residuals vs. Leverage (Cook's distance)</h3>
+      <div id="resid-leverage"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
