@@ -35,14 +35,14 @@
       cursor: pointer;
     }
     .controls input[type="range"] { width: 140px; }
-    .swatch {
-      display: inline-block;
-      width: 0.65rem;
-      height: 0.65rem;
-      border-radius: 50%;
+    .swatch { display: inline-block; margin-right: 0.15rem; vertical-align: middle; }
+    .swatch.class0 { width: 0.65rem; height: 0.65rem; border-radius: 50%; background: #1a5fb4; }
+    .swatch.class1 {
+      width: 0; height: 0;
+      border-left: 0.4rem solid transparent;
+      border-right: 0.4rem solid transparent;
+      border-bottom: 0.7rem solid #a85d00;
     }
-    .swatch.class0 { background: #1a5fb4; }
-    .swatch.class1 { background: #e08a1e; }
 
     #main-panel, #sigmoid-panel { border: 1px solid #ddd; border-radius: 4px; }
     #main-panel { margin-bottom: 1rem; }
@@ -52,7 +52,7 @@
     #stats span { font-weight: 600; }
 
     .pt.class0 { fill: #1a5fb4; }
-    .pt.class1 { fill: #e08a1e; }
+    .pt.class1 { fill: #a85d00; }
     #main-panel .pt { cursor: grab; }
     #main-panel .pt:active { cursor: grabbing; }
     .boundary-line { stroke: #c01c28; stroke-width: 2; }
@@ -67,6 +67,7 @@
   <h1>Logistic Regression</h1>
   <p class="instructions">
     Click empty space to add a point of the selected class, drag a point to move it, double-click to remove it.
+    Class 0 points are blue circles; class 1 points are orange triangles.
     The red line is the fitted decision boundary (p = 0.5); the fainter lines are probability contours.
     The panel below plots each point at its linear predictor value against the fitted sigmoid curve.
   </p>
@@ -82,7 +83,7 @@
 
   <div id="main-panel"></div>
   <div id="sigmoid-panel"></div>
-  <div id="stats">
+  <div id="stats" aria-live="polite" aria-atomic="true">
     n = <span id="n">0</span> &nbsp;|&nbsp;
     logit(p) = <span id="b0">–</span> + <span id="b1">–</span>·x&#8321; + <span id="b2">–</span>·x&#8322;
     &nbsp;|&nbsp; accuracy = <span id="accuracy">–</span>

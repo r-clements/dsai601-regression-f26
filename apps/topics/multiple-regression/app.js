@@ -88,7 +88,9 @@ let azimuth = -0.6, elevation = 0.35;
 let yMid = 0, yHalf = 1;
 
 const svg = d3.select("#main-panel").append("svg")
-  .attr("width", width).attr("height", height);
+  .attr("width", width).attr("height", height)
+  .attr("role", "img")
+  .attr("aria-label", "Rotatable 3D scatter plot of two predictors and an outcome, with the OLS-fitted regression plane shown as a red wireframe mesh. Current fit statistics are reported in the text below the plot.");
 
 const backgroundRect = svg.append("rect")
   .attr("x", 0).attr("y", 0).attr("width", width).attr("height", height)

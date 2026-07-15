@@ -11,6 +11,12 @@ function sigmoid(z) {
   return 1 / (1 + Math.exp(-z));
 }
 
+// Points are shape-coded (not just color-coded) so class is legible without color vision:
+// class 0 = circle, class 1 = triangle.
+function classSymbolPath(cls, size) {
+  return d3.symbol().type(cls === 0 ? d3.symbolCircle : d3.symbolTriangle).size(size)();
+}
+
 // ---------- data generation ----------
 
 let nextId = 0;
@@ -102,7 +108,9 @@ const mainWidth = 760, mainHeight = 440;
 const mainMargin = { top: 20, right: 20, bottom: 45, left: 55 };
 
 const mainSvg = d3.select("#main-panel").append("svg")
-  .attr("width", mainWidth).attr("height", mainHeight);
+  .attr("width", mainWidth).attr("height", mainHeight)
+  .attr("role", "img")
+  .attr("aria-label", "Scatter plot of two classes: class 0 as blue circles, class 1 as orange triangles. A red decision boundary line and fainter probability contour lines are drawn across the plot. Current fit statistics are reported in the text below.");
 
 const mainX = d3.scaleLinear().range([mainMargin.left, mainWidth - mainMargin.right]);
 const mainY = d3.scaleLinear().range([mainHeight - mainMargin.bottom, mainMargin.top]);
@@ -200,10 +208,10 @@ function renderMain(fit) {
     .attr("x1", d => mainX(d[0].x1)).attr("y1", d => mainY(d[0].x2))
     .attr("x2", d => mainX(d[1].x1)).attr("y2", d => mainY(d[1].x2));
 
-  mainPointLayer.selectAll("circle")
+  mainPointLayer.selectAll("path.pt")
     .data(points, d => d.id)
-    .join("circle")
-    .attr("r", 5)
+    .join("path")
+    .attr("d", d => classSymbolPath(d.cls, 80))
     .call(mainDrag)
     .on("dblclick", (event, d) => {
       event.stopPropagation();
@@ -211,8 +219,7 @@ function renderMain(fit) {
       update();
     })
     .attr("class", d => "pt class" + d.cls)
-    .attr("cx", d => mainX(d.x1))
-    .attr("cy", d => mainY(d.x2));
+    .attr("transform", d => `translate(${mainX(d.x1)},${mainY(d.x2)})`);
 
   addAxisLabels(mainSvg, mainWidth, mainHeight, "x₁", "x₂");
 }
@@ -223,7 +230,9 @@ const sigWidth = 760, sigHeight = 260;
 const sigMargin = { top: 15, right: 20, bottom: 45, left: 55 };
 
 const sigSvg = d3.select("#sigmoid-panel").append("svg")
-  .attr("width", sigWidth).attr("height", sigHeight);
+  .attr("width", sigWidth).attr("height", sigHeight)
+  .attr("role", "img")
+  .attr("aria-label", "Sigmoid curve of predicted probability against the linear predictor, with each data point plotted at its own linear predictor value near y=0 (class 0, circles) or y=1 (class 1, triangles).");
 
 const sigX = d3.scaleLinear().range([sigMargin.left, sigWidth - sigMargin.right]);
 const sigY = d3.scaleLinear().domain([0, 1]).range([sigHeight - sigMargin.bottom, sigMargin.top]);
@@ -238,7 +247,7 @@ const sigPointLayer = sigSvg.append("g");
 function renderSigmoid(fit) {
   if (!fit) {
     sigCurveLayer.selectAll("path").remove();
-    sigPointLayer.selectAll("circle").remove();
+    sigPointLayer.selectAll("path").remove();
     return;
   }
 
@@ -267,13 +276,12 @@ function renderSigmoid(fit) {
     .attr("d", line);
 
   const pointData = points.map((p, i) => ({ id: p.id, z: zs[i], y: p.cls + p.jitter, cls: p.cls }));
-  sigPointLayer.selectAll("circle")
+  sigPointLayer.selectAll("path.pt")
     .data(pointData, d => d.id)
-    .join("circle")
+    .join("path")
+    .attr("d", d => classSymbolPath(d.cls, 50))
     .attr("class", d => "pt class" + d.cls)
-    .attr("r", 4)
-    .attr("cx", d => sigX(d.z))
-    .attr("cy", d => sigY(d.y));
+    .attr("transform", d => `translate(${sigX(d.z)},${sigY(d.y)})`);
 
   addAxisLabels(sigSvg, sigWidth, sigHeight, "linear predictor (z = b₀ + b₁x₁ + b₂x₂)", "class / p̂");
 }

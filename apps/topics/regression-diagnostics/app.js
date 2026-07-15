@@ -98,7 +98,9 @@ const mainWidth = 900, mainHeight = 340;
 const mainMargin = { top: 20, right: 20, bottom: 45, left: 55 };
 
 const mainSvg = d3.select("#main-panel").append("svg")
-  .attr("width", mainWidth).attr("height", mainHeight);
+  .attr("width", mainWidth).attr("height", mainHeight)
+  .attr("role", "img")
+  .attr("aria-label", "Scatter plot of the simulated data with an OLS fitted line and dashed residual segments; points flagged as highly influential are outlined and colored red. Current fit statistics are reported in the text below the plot.");
 
 const mainX = d3.scaleLinear().range([mainMargin.left, mainWidth - mainMargin.right]);
 const mainY = d3.scaleLinear().range([mainHeight - mainMargin.bottom, mainMargin.top]);
@@ -182,10 +184,12 @@ function renderMain(fit) {
 
 // ---------- generic small-multiple panel ----------
 
-function setupPanel(containerId) {
+function setupPanel(containerId, ariaLabel) {
   const width = 440, height = 260;
   const margin = { top: 15, right: 15, bottom: 40, left: 50 };
-  const svg = d3.select(containerId).append("svg").attr("width", width).attr("height", height);
+  const svg = d3.select(containerId).append("svg").attr("width", width).attr("height", height)
+    .attr("role", "img")
+    .attr("aria-label", ariaLabel);
   const x = d3.scaleLinear().range([margin.left, width - margin.right]);
   const y = d3.scaleLinear().range([height - margin.bottom, margin.top]);
   const xAxisG = svg.append("g").attr("transform", `translate(0,${height - margin.bottom})`);
@@ -226,10 +230,10 @@ function renderScatterPanel(panel, data, xAcc, yAcc) {
     .attr("cy", d => panel.y(yAcc(d)));
 }
 
-const residFittedPanel = setupPanel("#resid-fitted");
-const qqPanel = setupPanel("#qq-plot");
-const scaleLocationPanel = setupPanel("#scale-location");
-const residLeveragePanel = setupPanel("#resid-leverage");
+const residFittedPanel = setupPanel("#resid-fitted", "Residuals versus fitted values, with a dashed reference line at zero. A curved or funnel-shaped pattern indicates nonlinearity or non-constant variance.");
+const qqPanel = setupPanel("#qq-plot", "Normal quantile-quantile plot of standardized residuals against theoretical normal quantiles, with a dashed diagonal reference line. Points that stray from the diagonal indicate departure from normality.");
+const scaleLocationPanel = setupPanel("#scale-location", "Square root of absolute standardized residuals versus fitted values. An increasing trend indicates non-constant variance.");
+const residLeveragePanel = setupPanel("#resid-leverage", "Standardized residuals versus leverage, with dashed Cook's distance contours at 0.5 and 1. Points near or beyond the outer contour are highly influential.");
 
 function renderResidFitted(points) {
   renderScatterPanel(residFittedPanel, points, d => d.fitted, d => d.resid);

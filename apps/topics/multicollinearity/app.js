@@ -86,10 +86,12 @@ function runMonteCarlo(r, replicates, nEach) {
 
 // ---------- generic small-multiple panel ----------
 
-function setupPanel(containerId) {
+function setupPanel(containerId, ariaLabel) {
   const width = 440, height = 380;
   const margin = { top: 15, right: 15, bottom: 45, left: 55 };
-  const svg = d3.select(containerId).append("svg").attr("width", width).attr("height", height);
+  const svg = d3.select(containerId).append("svg").attr("width", width).attr("height", height)
+    .attr("role", "img")
+    .attr("aria-label", ariaLabel);
   const x = d3.scaleLinear().range([margin.left, width - margin.right]);
   const y = d3.scaleLinear().range([height - margin.bottom, margin.top]);
   const xAxisG = svg.append("g").attr("transform", `translate(0,${height - margin.bottom})`);
@@ -130,8 +132,8 @@ function renderScatterPanel(panel, data, xAcc, yAcc) {
     .attr("cy", d => panel.y(yAcc(d)));
 }
 
-const predictorPanel = setupPanel("#predictor-scatter");
-const coefPanel = setupPanel("#coef-cloud");
+const predictorPanel = setupPanel("#predictor-scatter", "Scatter plot of one simulated sample of the two predictors x1 and x2. As the correlation slider increases in magnitude, the points fall closer to a straight line.");
+const coefPanel = setupPanel("#coef-cloud", "Scatter plot of estimated slope coefficients b1 and b2 from 150 independent resamples at the current correlation, with a red cross marking the true values. As correlation increases, the cloud stretches into a narrow diagonal ridge, showing the coefficients becoming unstable and anti-correlated.");
 
 function renderPredictorPanel(sample) {
   renderScatterPanel(predictorPanel, sample, d => d.x1, d => d.x2);

@@ -5,7 +5,9 @@ const margin = { top: 20, right: 20, bottom: 40, left: 50 };
 const svg = d3.select("#chart")
   .append("svg")
   .attr("width", width)
-  .attr("height", height);
+  .attr("height", height)
+  .attr("role", "img")
+  .attr("aria-label", "Scatter plot with an ordinary least squares fitted line and dashed residual segments; current fit statistics are reported in the text below the plot.");
 
 const x = d3.scaleLinear().domain([0, 10]).range([margin.left, width - margin.right]);
 const y = d3.scaleLinear().domain([0, 10]).range([height - margin.bottom, margin.top]);
@@ -25,10 +27,13 @@ svg.append("rect")
   .attr("width", width - margin.left - margin.right)
   .attr("height", height - margin.top - margin.bottom)
   .attr("fill", "transparent")
+  .style("pointer-events", "all")
   .on("click", (event) => {
     const [px, py] = d3.pointer(event);
-    points.push({ x: x.invert(px), y: y.invert(py) });
+    const id = nextId++;
+    points.push({ id, x: x.invert(px), y: y.invert(py) });
     update();
+    focusPointById(id);
   });
 
 const residualLayer = svg.append("g");
@@ -36,6 +41,38 @@ const pointLayer = svg.append("g");
 const lineLayer = svg.append("g");
 
 let points = [];
+let nextId = 0;
+
+function focusPointById(id) {
+  const node = pointLayer.selectAll("circle").filter(d => d.id === id).node();
+  if (node) node.focus();
+}
+
+// Arrow keys nudge the focused point (Shift = larger step); Delete/Backspace removes it.
+function handlePointKeydown(event, d) {
+  const stepX = (x.domain()[1] - x.domain()[0]) * (event.shiftKey ? 0.1 : 0.02);
+  const stepY = (y.domain()[1] - y.domain()[0]) * (event.shiftKey ? 0.1 : 0.02);
+  switch (event.key) {
+    case "ArrowLeft": event.preventDefault(); d.x -= stepX; update(); break;
+    case "ArrowRight": event.preventDefault(); d.x += stepX; update(); break;
+    case "ArrowUp": event.preventDefault(); d.y += stepY; update(); break;
+    case "ArrowDown": event.preventDefault(); d.y -= stepY; update(); break;
+    case "Delete":
+    case "Backspace": {
+      event.preventDefault();
+      const idx = points.findIndex(p => p.id === d.id);
+      points = points.filter(p => p.id !== d.id);
+      update();
+      const nodes = pointLayer.selectAll("circle").nodes();
+      if (nodes.length > 0) {
+        nodes[Math.min(idx, nodes.length - 1)].focus();
+      } else {
+        document.getElementById("add-point").focus();
+      }
+      break;
+    }
+  }
+}
 
 function ols(pts) {
   const n = pts.length;
@@ -51,10 +88,14 @@ function ols(pts) {
 
 function update() {
   pointLayer.selectAll("circle")
-    .data(points)
+    .data(points, d => d.id)
     .join("circle")
     .attr("class", "point")
     .attr("r", 5)
+    .attr("tabindex", 0)
+    .attr("role", "button")
+    .on("keydown", handlePointKeydown)
+    .attr("aria-label", d => `Data point ${points.indexOf(d) + 1} of ${points.length} at x = ${d.x.toFixed(2)}, y = ${d.y.toFixed(2)}. Use arrow keys to move, Delete or Backspace to remove.`)
     .attr("cx", d => x(d.x))
     .attr("cy", d => y(d.y));
 
@@ -98,6 +139,15 @@ function update() {
 document.getElementById("reset").addEventListener("click", () => {
   points = [];
   update();
+});
+
+document.getElementById("add-point").addEventListener("click", () => {
+  const id = nextId++;
+  const cx = points.length ? d3.mean(points, p => p.x) : (x.domain()[0] + x.domain()[1]) / 2;
+  const cy = points.length ? d3.mean(points, p => p.y) : (y.domain()[0] + y.domain()[1]) / 2;
+  points.push({ id, x: cx, y: cy });
+  update();
+  focusPointById(id);
 });
 
 update();

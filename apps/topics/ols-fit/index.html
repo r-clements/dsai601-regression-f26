@@ -16,13 +16,22 @@
     a.back { font-size: 0.9rem; color: #1a5fb4; text-decoration: none; }
     h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
     p.instructions { color: #555; font-size: 0.95rem; margin-top: 0; }
+    p.a11y-instructions {
+      border-left: 3px solid #1a5fb4;
+      padding-left: 0.75rem;
+      margin-top: 0.5rem;
+    }
     #chart { border: 1px solid #ddd; border-radius: 4px; }
     .point { fill: #1a5fb4; cursor: pointer; }
     .point:hover { fill: #c01c28; }
+    .point:focus { stroke: #000; stroke-width: 2.5px; outline: none; }
     .fit-line { stroke: #c01c28; stroke-width: 2; }
     .residual { stroke: #999; stroke-dasharray: 3 3; }
     #stats { font-size: 0.95rem; margin-top: 0.75rem; }
-    #stats span { font-weight: 600; }
+    #stats .stat { margin-right: 0.5rem; }
+    #stats .stat:not(:last-child)::after { content: " | "; color: #999; font-weight: 400; }
+    #stats .stat-value { font-weight: 600; }
+    .buttons { display: flex; gap: 0.75rem; }
     button {
       margin-top: 0.75rem;
       padding: 0.4rem 0.8rem;
@@ -34,10 +43,23 @@
 <body>
   <a class="back" href="../../">&larr; All topics</a>
   <h1>Ordinary Least Squares Fit</h1>
-  <p class="instructions">Click anywhere on the plot to add a data point. The line minimizes the sum of squared residuals (dashed).</p>
+  <p id="instructions" class="instructions">Click anywhere on the plot to add a data point. The line minimizes the sum of squared residuals (dashed).</p>
+  <p id="a11y-instructions" class="instructions a11y-instructions">
+    Keyboard and screen reader users: press "Add point" to add a point at the center of the current data.
+    Tab to a point to select it; use the arrow keys to move it (hold Shift for larger steps), and press
+    Delete or Backspace to remove it.
+  </p>
   <div id="chart"></div>
-  <div id="stats">n = <span id="n">0</span> &nbsp;|&nbsp; slope = <span id="slope">–</span> &nbsp;|&nbsp; intercept = <span id="intercept">–</span> &nbsp;|&nbsp; SSR = <span id="ssr">–</span></div>
-  <button id="reset">Reset points</button>
+  <div id="stats" aria-live="polite" aria-atomic="true">
+    <span class="stat">n = <span id="n" class="stat-value">0</span></span>
+    <span class="stat">slope = <span id="slope" class="stat-value">–</span></span>
+    <span class="stat">intercept = <span id="intercept" class="stat-value">–</span></span>
+    <span class="stat">SSR = <span id="ssr" class="stat-value">–</span></span>
+  </div>
+  <div class="buttons">
+    <button id="add-point" aria-describedby="instructions a11y-instructions">Add point</button>
+    <button id="reset" aria-describedby="instructions a11y-instructions">Reset points</button>
+  </div>
 
   <script src="app.js"></script>
 </body>

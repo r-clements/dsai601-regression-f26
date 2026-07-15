@@ -65,14 +65,14 @@
     }
 
     .point { fill: #1a5fb4; cursor: grab; }
-    .point.notable { fill: #c01c28; }
+    .point.notable { fill: #c01c28; stroke: #222; stroke-width: 1.4px; }
     .point:active { cursor: grabbing; }
     .fit-line { stroke: #c01c28; stroke-width: 2; }
     .ref-line { stroke: #999; stroke-dasharray: 4 3; }
-    .cooks-line { stroke: #e08a1e; stroke-dasharray: 2 2; fill: none; }
+    .cooks-line { stroke: #a85d00; stroke-dasharray: 2 2; fill: none; }
     .qq-diag { stroke: #999; stroke-dasharray: 4 3; }
     .diag-point { fill: #1a5fb4; }
-    .diag-point.notable { fill: #c01c28; }
+    .diag-point.notable { fill: #c01c28; stroke: #222; stroke-width: 1.2px; }
     .axis-label { font-size: 0.75rem; fill: #555; }
   </style>
 </head>
@@ -96,7 +96,7 @@
   </div>
 
   <div id="main-panel"></div>
-  <div id="stats">n = <span id="n">0</span> &nbsp;|&nbsp; slope = <span id="slope">–</span> &nbsp;|&nbsp; intercept = <span id="intercept">–</span> &nbsp;|&nbsp; flagged points (Cook's D &gt; 4/n) = <span id="flagged">0</span></div>
+  <div id="stats" aria-live="polite" aria-atomic="true">n = <span id="n">0</span> &nbsp;|&nbsp; slope = <span id="slope">–</span> &nbsp;|&nbsp; intercept = <span id="intercept">–</span> &nbsp;|&nbsp; flagged points (Cook's D &gt; 4/n) = <span id="flagged">0</span></div>
 
   <div class="grid">
     <div class="cell">
