@@ -9,7 +9,7 @@
 
 **Office Hours**:  Mon 9:00-10:00; Thur 3:00-4:00 
 
-**Book**: Applied Linear Statistical Models by Kutner, Nachtsheim, Neter, and Li
+**Optional Book**: Applied Linear Statistical Models by Kutner, Nachtsheim, Neter, and Li
 
 **Syllabus**: [Link](TBD)
 
