@@ -4,7 +4,7 @@
 **Lecture**: Mon/Thurs 10:00-12:00 or 1:00-3:00; SFD 529  
 **Instructor**: Robert Clements  
 **Email**: rclements [at] usfca [dot] edu  
-**Office Hours**: Mon 9:00-10:00; Thurs 3:00-4:00
+**Office Hours**: Mon 9:00-10:00; Thurs 3:00-4:00  
 **Optional Textbook**: Applied Linear Statistical Models by Kutner, Nachtsheim, Neter, and Li
 
 ## Material Covered 
@@ -101,15 +101,15 @@ Final Exam (45%)
 
 Course Grade Cutoffs***:
 
-A+ 97 - 100
-A 93 - 97
-A- 90 - 93
-B+ 87 - 90
-B 83 - 87
-B- 80 - 83
-C+ 77 - 80
-C 73 - 77
-C- 70 - 73
+A+ 97 - 100   
+A 93 - 97   
+A- 90 - 93  
+B+ 87 - 90  
+B 83 - 87  
+B- 80 - 83  
+C+ 77 - 80  
+C 73 - 77  
+C- 70 - 73  
 F 0 - 70
 
 ** Grading scheme is approximate. Instructor reserves the right to adjust grading scheme.
