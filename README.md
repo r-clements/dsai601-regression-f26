@@ -1,6 +1,5 @@
 # Linear Regression - DSAI 601
 
-
 ## Robert Clements
 
 **Email**: rclements [at] usfca [dot] edu
@@ -12,6 +11,13 @@
 **Optional Book**: Applied Linear Statistical Models by Kutner, Nachtsheim, Neter, and Li
 
 **Syllabus**: [Syllabus link](https://github.com/r-clements/dsai601-regression-f26/blob/main/syllabus/dsai-601-fall-2026-syllabus.md)
+
+
+## Using This Repo
+
+git clone <repo-url>
+cd repo
+uv sync
 
 ## Material Covered: 
 
