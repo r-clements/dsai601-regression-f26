@@ -11,7 +11,7 @@
 
 **Optional Book**: Applied Linear Statistical Models by Kutner, Nachtsheim, Neter, and Li
 
-**Syllabus**: [Link](TBD)
+**Syllabus**: [Syllabus link](https://github.com/r-clements/dsai601-regression-f26/blob/main/syllabus/dsai-601-fall-2026-syllabus.md)
 
 ## Material Covered: 
 
