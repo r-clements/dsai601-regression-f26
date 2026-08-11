@@ -15,7 +15,8 @@
 
 ## Using This Repo
 
-```git clone <repo-url>
+```
+git clone <repo-url>
 cd repo
 uv sync
 ```
