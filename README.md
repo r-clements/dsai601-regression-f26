@@ -16,8 +16,10 @@
 ## Using This Repo
 
 ```
-git clone <repo-url>
-cd repo
+git clone https://github.com/r-clements/dsai601-regression-f26.git
+
+# cd into the repo
+
 uv sync
 ```
 
@@ -33,12 +35,12 @@ variable selection techniques. Programming language is Python.
 |Week | Dates | Topics | Reading | Notable Events |
 | :---:  | :---:  | :---:  | :---:  | :---: |
 |Week 1| 8/27 | Intro, Simple Linear Regression: parameter estimation, mean, variance | Sec. 1.5 & 1.6 |   |
-|Week 2| 8/31 & 9/3  | SLR: parameter distributions, sum of squares decomposition | Sec. 1.7, 2.1, 2.2,  2.7| [HW1 Due](TBD) |
-|Week 3| 9/7 (No Class - Labor Day) & 9/10 | SLR: confidence and prediction intervals, model assumptions and diagnostics; ANOVA and the F-test | 2.4-5, 3.1-3 | [HW2 Due](TBD)|
+|Week 2| 8/31 & 9/3  | SLR: parameter distributions, sum of squares decomposition | Sec. 1.7, 2.1, 2.2,  2.7| HW1 Due |
+|Week 3| 9/7 (No Class - Labor Day) & 9/10 | SLR: confidence and prediction intervals, model assumptions and diagnostics; ANOVA and the F-test | 2.4-5, 3.1-3 | HW2 Due|
 |Week 4| 9/14 & 9/17 |  Multiple Linear Regression: matrix notation; projection interpretation and geometry of regression| 6.1-6, 7.1-6  | Midterm Exam |
-|Week 5| 9/21 & 9/24 |MLR:  Feature engineering &  Modeling Problems| 3.7, 7.1-6, 8.3 | [HW3 Due](TBD) |
-|Week 6| 9/28 & 10/1 |  Modeling problems: multicollinearity, assumption violations, influential points, outliers, transformations | Ch. 10 | [HW4 Due](TBD)  |
-|Week 7| 10/5 & 10/8 | Regression Pitfalls & Model Selection | 6.8, 8.1-2,  9.1-4| [HW 5 Due](TBD)  |
+|Week 5| 9/21 & 9/24 |MLR:  Feature engineering &  Modeling Problems| 3.7, 7.1-6, 8.3 | HW3 Due |
+|Week 6| 9/28 & 10/1 |  Modeling problems: multicollinearity, assumption violations, influential points, outliers, transformations | Ch. 10 | HW4 Due  |
+|Week 7| 10/5 & 10/8 | Regression Pitfalls & Model Selection | 6.8, 8.1-2,  9.1-4| HW 5 Due  |
 |Week 8 | 10/12 & 10/15 | Logistic Regression | Ch. 14 |  Final Exam (10/15) |
 
 
