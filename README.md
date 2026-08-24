@@ -4,9 +4,9 @@
 
 **Email**: rclements [at] usfca [dot] edu
 
-**Class Time**: Mon/Thurs 10a-12p or 1p-3p in SFD 529
+**Class Time**: Mon/Thurs 10:00AM-12:00PM or 1:00PM-3:00PM in SFD 529
 
-**Office Hours**:  Mon 9:00-10:00; Thur 3:00-4:00 
+**Office Hours**:  Mon 9:00AM-9:50AM; Thur 3:00PM-4:00PM 
 
 **Optional Book**: Applied Linear Statistical Models by Kutner, Nachtsheim, Neter, and Li
 
@@ -34,9 +34,9 @@ variable selection techniques. Programming language is Python.
 *subject to change
 |Week | Dates | Topics | Reading | Notable Events |
 | :---:  | :---:  | :---:  | :---:  | :---: |
-|Week 1| 8/27 | Intro, Simple Linear Regression: parameter estimation, mean, variance | Sec. 1.5 & 1.6 |   |
+|Week 1| 8/27 | Intro, Simple Linear Regression: parameter estimation | Sec. 1.5 & 1.6 |   |
 |Week 2| 8/31 & 9/3  | SLR: parameter distributions, sum of squares decomposition | Sec. 1.7, 2.1, 2.2,  2.7| HW1 Due |
-|Week 3| 9/7 (No Class - Labor Day) & 9/10 | SLR: confidence and prediction intervals, model assumptions and diagnostics; ANOVA and the F-test | 2.4-5, 3.1-3 | HW2 Due|
+|Week 3| 9/7 (No Class - Labor Day; moved to 9/11) & 9/10 & 9/11 | SLR: confidence and prediction intervals, model assumptions and diagnostics; ANOVA and the F-test | 2.4-5, 3.1-3 | HW2 Due|
 |Week 4| 9/14 & 9/17 |  Multiple Linear Regression: matrix notation; projection interpretation and geometry of regression| 6.1-6, 7.1-6  | Midterm Exam |
 |Week 5| 9/21 & 9/24 |MLR:  Feature engineering &  Modeling Problems| 3.7, 7.1-6, 8.3 | HW3 Due |
 |Week 6| 9/28 & 10/1 |  Modeling problems: multicollinearity, assumption violations, influential points, outliers, transformations | Ch. 10 | HW4 Due  |
