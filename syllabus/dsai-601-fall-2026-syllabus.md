@@ -84,8 +84,7 @@ I do not answer any questions during the exam. If you are confused by a question
 
 ## Course Website
 
-The class will be using Github to distribute all resources and Canvas to collect homework assignments. Exams will be uploaded to Gradescope (https://gradescope.com/), and the graded exams will be released on this website. You will receive an email from the site allowing you to register
-after the first exam. Please do not try to register on your own.
+The class will be using Github to distribute all resources and Gradescope (https://gradescope.com/) to collect homework assignments. Exams will be uploaded to Gradescope. You will receive an email from the site allowing you to register. Please do not try to register on your own.
 
 ## Grades
 
