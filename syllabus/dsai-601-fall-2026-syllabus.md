@@ -4,7 +4,7 @@
 **Lecture**: Mon/Thurs 10:00-12:00 or 1:00-3:00; SFD 529  
 **Instructor**: Robert Clements  
 **Email**: rclements [at] usfca [dot] edu  
-**Office Hours**: Mon 9:00-10:00; Thurs 3:00-4:00  
+**Office Hours**: Mon 9:00-9:50; Thurs 3:00-3:50  
 **Optional Textbook**: Applied Linear Statistical Models by Kutner, Nachtsheim, Neter, and Li
 
 ## Material Covered 
