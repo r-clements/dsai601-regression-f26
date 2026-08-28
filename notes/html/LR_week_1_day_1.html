@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simple Linear Regression: Prediction vs. Inference — Week 1, Day 1 | DSAI 601</title>
+<meta name="description" content="Accessible class notes on simple linear regression: model setup, assumptions, the regression function, and least squares estimation of the intercept and slope.">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --muted: #4a4a4a;
+    --rule: #c9c9c9;
+    --accent: #0b4f8a;
+    --accent-bg: #eef4fa;
+    --focus: #0b4f8a;
+    --pop: #a4262c;   /* population / true  — 5.9:1 on white */
+    --est: #5b2d8e;   /* estimate / fitted  — 8.5:1 on white */
+    --err: #8a5000;   /* errors / residuals — 5.1:1 on white */
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #f2f2f2; --muted: #cfcfcf; --rule: #555;
+      --accent: #8ab8e0; --accent-bg: #182430; --focus: #8ab8e0;
+      --pop: #ff9f99; --est: #cbb0ff; --err: #f0b458;
+    }
+    body { background: #131313; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 1.0625rem;
+    line-height: 1.65;
+    color: var(--ink);
+    background: #fff;
+  }
+  @media (prefers-color-scheme: dark) { body { background: #131313; } }
+  .wrap { max-width: 46rem; margin: 0 auto; padding: 1.5rem 1.25rem 5rem; }
+  a { color: var(--accent); }
+  a:focus-visible, summary:focus-visible, :focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+  .skip {
+    position: absolute; left: -9999px; top: 0;
+    background: var(--accent); color: #fff;
+    padding: .75rem 1rem; z-index: 10; text-decoration: none;
+  }
+  .skip:focus { left: .5rem; top: .5rem; }
+  h1 { font-size: 1.85rem; line-height: 1.25; margin: 0 0 .25rem; }
+  h2 { font-size: 1.35rem; line-height: 1.3; margin: 2.5rem 0 .5rem;
+       padding-top: .75rem; border-top: 2px solid var(--rule); }
+  h3 { font-size: 1.1rem; margin: 1.75rem 0 .4rem; }
+  p, li { max-width: 42rem; }
+  .lede { color: var(--muted); margin-top: 0; }
+  nav.toc {
+    background: var(--accent-bg); border: 1px solid var(--rule);
+    border-radius: 8px; padding: 1rem 1.25rem; margin: 2rem 0;
+  }
+  nav.toc h2 { font-size: 1.05rem; margin: 0 0 .5rem; border: 0; padding: 0; }
+  nav.toc ol { margin: 0; padding-left: 1.25rem; }
+  nav.toc li { margin: .3rem 0; }
+  nav.toc a { display: inline-block; min-height: 24px; padding: 2px 0; }
+  table { border-collapse: collapse; margin: 1rem 0; width: 100%; }
+  caption { text-align: left; font-weight: 600; padding-bottom: .5rem; }
+  th, td { border: 1px solid var(--rule); padding: .5rem .7rem; text-align: left; }
+  thead th { background: var(--accent-bg); }
+  figure { margin: 1.5rem 0; }
+  figcaption { font-size: .95rem; color: var(--muted); margin-top: .5rem; }
+  svg { max-width: 100%; height: auto; display: block; }
+  details {
+    border: 1px solid var(--rule); border-radius: 6px;
+    padding: .5rem .85rem; margin: .75rem 0; background: var(--accent-bg);
+  }
+  summary { cursor: pointer; font-weight: 600; min-height: 24px; padding: .25rem 0; }
+  details[open] summary { margin-bottom: .5rem; }
+  math { font-size: 1.15em; }
+  math[display="block"] { margin: 1rem 0; overflow-x: auto; overflow-y: hidden; }
+  .eq { margin: 1.25rem 0; }
+  .note {
+    border-left: 4px solid var(--accent); background: var(--accent-bg);
+    padding: .75rem 1rem; margin: 1.25rem 0; border-radius: 0 6px 6px 0;
+  }
+  .tag {
+    display: inline-block; font-size: .8rem; font-weight: 700;
+    letter-spacing: .02em; text-transform: uppercase;
+    border: 1px solid currentColor; border-radius: 4px;
+    padding: 0 .4em; white-space: nowrap;
+  }
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 2px solid var(--rule);
+           color: var(--muted); font-size: .95rem; }
+  ol.steps { padding-left: 1.4rem; }
+  ol.steps > li { margin: .75rem 0; }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+
+<div class="wrap">
+<header>
+  <p class="lede"><strong>DSAI 601 — Regression</strong> · Fall 2026 · Week 1, Day 1</p>
+  <h1>Simple Linear Regression: Prediction vs. Inference</h1>
+  <p class="lede">Accessible transcription of the handwritten class notes. All equations are marked up in MathML so they can be read by a screen reader, magnified, or rendered in braille. All figures have text descriptions.</p>
+</header>
+
+<nav class="toc" aria-labelledby="toc-h">
+  <h2 id="toc-h">On this page</h2>
+  <ol>
+    <li><a href="#setup">Simple linear regression (SLR)</a></li>
+    <li><a href="#data">Example data</a></li>
+    <li><a href="#model">The SLR model</a></li>
+    <li><a href="#lines">Population line vs. estimated line</a></li>
+    <li><a href="#params">Parameters and their estimates</a></li>
+    <li><a href="#errdist">Distribution of the errors</a></li>
+    <li><a href="#assumptions">Model assumptions</a></li>
+    <li><a href="#regfun">The regression function</a></li>
+    <li><a href="#lsq">Estimating the coefficients: least squares</a></li>
+    <li><a href="#partials">Setting the partial derivatives to zero</a></li>
+    <li><a href="#solve">Solving for the estimates</a></li>
+    <li><a href="#next">Coming next</a></li>
+  </ol>
+</nav>
+
+<main id="main">
+
+<h2 id="setup">Simple linear regression (SLR)</h2>
+
+<p><strong>Simple linear regression</strong> uses <strong>one predictor</strong> (<em>x</em>) and <strong>one response</strong> (<em>y</em>).</p>
+
+<table>
+  <caption>Vocabulary: the two variables go by several names</caption>
+  <thead>
+    <tr><th scope="col">Symbol</th><th scope="col">Names used for it</th></tr>
+  </thead>
+  <tbody>
+    <tr><th scope="row"><em>x</em></th><td>predictor, independent variable, covariate, feature</td></tr>
+    <tr><th scope="row"><em>y</em></th><td>response, dependent variable, target</td></tr>
+  </tbody>
+</table>
+
+<h2 id="data">Example data</h2>
+
+<p>A running example: predicting the weight of a frog from its length.</p>
+
+<table>
+  <caption>Frog measurements — first three observations</caption>
+  <thead>
+    <tr>
+      <th scope="col"><em>x</em>: frog length (cm)</th>
+      <th scope="col"><em>y</em>: frog weight (g)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>10</td><td>20</td></tr>
+    <tr><td>12</td><td>24</td></tr>
+    <tr><td>9</td><td>21</td></tr>
+  </tbody>
+  <tfoot>
+    <tr><td colspan="2">… and so on, for all <em>n</em> observations.</td></tr>
+  </tfoot>
+</table>
+
+<h2 id="model">The SLR model</h2>
+
+<div class="eq">
+<math display="block" alttext="y sub i equals beta sub 0 plus beta sub 1 times x sub i plus epsilon sub i, for i equals 1 through n">
+  <mrow>
+    <msub><mi>y</mi><mi>i</mi></msub>
+    <mo>=</mo>
+    <msub><mi>β</mi><mn>0</mn></msub>
+    <mo>+</mo>
+    <msub><mi>β</mi><mn>1</mn></msub>
+    <msub><mi>x</mi><mi>i</mi></msub>
+    <mo>+</mo>
+    <msub><mi>ε</mi><mi>i</mi></msub>
+    <mo lspace="1em">,</mo>
+    <mspace width="0.5em"></mspace>
+    <mi>i</mi><mo>=</mo><mn>1</mn><mo>,</mo><mo>…</mo><mo>,</mo><mi>n</mi>
+  </mrow>
+</math>
+</div>
+
+<p>Each symbol, and whether it is a fixed (non-random) quantity or a random one:</p>
+
+<table>
+  <caption>Components of the simple linear regression model</caption>
+  <thead>
+    <tr>
+      <th scope="col">Symbol</th>
+      <th scope="col">Meaning</th>
+      <th scope="col">Fixed or random?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row"><math alttext="y sub i"><msub><mi>y</mi><mi>i</mi></msub></math></th>
+      <td><em>i</em>th observation of the response <em>y</em></td>
+      <td><span class="tag" style="color:var(--err)">Random</span></td>
+    </tr>
+    <tr>
+      <th scope="row"><math alttext="x sub i"><msub><mi>x</mi><mi>i</mi></msub></math></th>
+      <td><em>i</em>th observation of the predictor <em>x</em></td>
+      <td><span class="tag">Fixed</span></td>
+    </tr>
+    <tr>
+      <th scope="row"><math alttext="n"><mi>n</mi></math></th>
+      <td>sample size</td>
+      <td><span class="tag">Fixed</span></td>
+    </tr>
+    <tr>
+      <th scope="row"><math alttext="beta sub 0"><msub><mi>β</mi><mn>0</mn></msub></math></th>
+      <td><strong>unknown intercept parameter</strong></td>
+      <td><span class="tag">Fixed</span></td>
+    </tr>
+    <tr>
+      <th scope="row"><math alttext="beta sub 1"><msub><mi>β</mi><mn>1</mn></msub></math></th>
+      <td><strong>unknown slope parameter</strong></td>
+      <td><span class="tag">Fixed</span></td>
+    </tr>
+    <tr>
+      <th scope="row"><math alttext="epsilon sub i"><msub><mi>ε</mi><mi>i</mi></msub></math></th>
+      <td>random error term</td>
+      <td><span class="tag" style="color:var(--err)">Random</span></td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="note">
+  <p><strong>The key idea.</strong> The <em>parameters</em> <math alttext="beta sub 0"><msub><mi>β</mi><mn>0</mn></msub></math> and <math alttext="beta sub 1"><msub><mi>β</mi><mn>1</mn></msub></math> are fixed but unknown. Randomness enters only through <math alttext="epsilon sub i"><msub><mi>ε</mi><mi>i</mi></msub></math>, and that randomness is what makes <math alttext="y sub i"><msub><mi>y</mi><mi>i</mi></msub></math> random.</p>
+</div>
+
+<h2 id="lines">Population line vs. estimated line</h2>
+
+<figure>
+<svg viewBox="0 0 560 300" role="img" aria-labelledby="fig1-t fig1-d" xmlns="http://www.w3.org/2000/svg">
+  <title id="fig1-t">Scatterplot with the true population regression line and the estimated regression line</title>
+  <desc id="fig1-d">A scatterplot of y against x showing an upward trend. Two nearly overlapping straight lines rise from lower left to upper right: a solid line labelled the population line y equals beta zero plus beta one x, and a dashed line labelled the estimated line y hat equals beta zero hat plus beta one hat x.</desc>
+  <!-- axes -->
+  <line x1="60" y1="250" x2="470" y2="250" stroke="currentColor" stroke-width="2"/>
+  <line x1="60" y1="250" x2="60" y2="30" stroke="currentColor" stroke-width="2"/>
+  <polygon points="470,250 462,246 462,254" fill="currentColor"/>
+  <polygon points="60,30 56,38 64,38" fill="currentColor"/>
+  <text x="475" y="255" font-size="15" fill="currentColor">x</text>
+  <text x="463" y="272" font-size="12" fill="currentColor">(predictor)</text>
+  <text x="40" y="30" font-size="15" fill="currentColor">y</text>
+  <text x="0" y="48" font-size="12" fill="currentColor">(response)</text>
+  <!-- points -->
+  <g fill="currentColor">
+    <circle cx="100" cy="215" r="4"/><circle cx="128" cy="222" r="4"/>
+    <circle cx="150" cy="196" r="4"/><circle cx="178" cy="205" r="4"/>
+    <circle cx="205" cy="180" r="4"/><circle cx="232" cy="188" r="4"/>
+    <circle cx="258" cy="160" r="4"/><circle cx="285" cy="172" r="4"/>
+    <circle cx="312" cy="140" r="4"/><circle cx="340" cy="152" r="4"/>
+    <circle cx="366" cy="118" r="4"/><circle cx="394" cy="130" r="4"/>
+  </g>
+  <!-- population line: solid -->
+  <line x1="85" y1="225" x2="415" y2="105" stroke="var(--pop)" stroke-width="3"/>
+  <!-- estimated line: dashed -->
+  <line x1="85" y1="232" x2="415" y2="98" stroke="var(--est)" stroke-width="3" stroke-dasharray="9 6"/>
+  <text x="95" y="70" font-size="13" fill="var(--pop)">population (solid):</text>
+  <text x="95" y="88" font-size="13" fill="var(--pop)">y = β₀ + β₁x</text>
+  <text x="330" y="200" font-size="13" fill="var(--est)">estimated (dashed):</text>
+  <text x="330" y="218" font-size="13" fill="var(--est)">ŷ = β̂₀ + β̂₁x</text>
+</svg>
+<figcaption>Figure 1. The unknown population line and the line we actually estimate from data.</figcaption>
+</figure>
+
+<details>
+  <summary>Long description of Figure 1</summary>
+  <p>The horizontal axis is <em>x</em>, the predictor. The vertical axis is <em>y</em>, the response. Twelve data points scatter upward from left to right. Two straight lines are drawn through the cloud of points and are close to each other but not identical:</p>
+  <ul>
+    <li>A <strong>solid</strong> line is the <strong>population</strong> regression line, <math alttext="y equals beta sub 0 plus beta sub 1 x"><mrow><mi>y</mi><mo>=</mo><msub><mi>β</mi><mn>0</mn></msub><mo>+</mo><msub><mi>β</mi><mn>1</mn></msub><mi>x</mi></mrow></math>. It is unknown.</li>
+    <li>A <strong>dashed</strong> line is the <strong>estimated</strong> line, <math alttext="y hat equals beta hat sub 0 plus beta hat sub 1 x"><mrow><mover><mi>y</mi><mo>^</mo></mover><mo>=</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>+</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mi>x</mi></mrow></math>. It is computed from the sample.</li>
+  </ul>
+  <p>The takeaway is that the estimated line approximates, but does not exactly reproduce, the population line.</p>
+</details>
+
+<h2 id="params">Parameters and their estimates</h2>
+
+<p>The same fixed-versus-estimated distinction shows up throughout statistics:</p>
+
+<table>
+  <caption>Population parameters and their sample estimates</caption>
+  <thead>
+    <tr>
+      <th scope="col">Parameter (population, unknown)</th>
+      <th scope="col">Estimate (from the sample)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><math alttext="mu"><mi>μ</mi></math> — the mean</td>
+      <td><math alttext="x bar, also written mu hat"><mrow><mover><mi>x</mi><mo>‾</mo></mover><mo>,</mo><mspace width="0.4em"></mspace><mover><mi>μ</mi><mo>^</mo></mover></mrow></math></td>
+    </tr>
+    <tr>
+      <td><math alttext="sigma squared"><msup><mi>σ</mi><mn>2</mn></msup></math> — the variance</td>
+      <td><math alttext="s squared"><msup><mi>s</mi><mn>2</mn></msup></math></td>
+    </tr>
+    <tr>
+      <td><math alttext="beta sub 0"><msub><mi>β</mi><mn>0</mn></msub></math> — the intercept</td>
+      <td><math alttext="beta hat sub 0"><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub></math></td>
+    </tr>
+    <tr>
+      <td><math alttext="beta sub 1"><msub><mi>β</mi><mn>1</mn></msub></math> — the slope</td>
+      <td><math alttext="beta hat sub 1"><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub></math></td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="errdist">Distribution of the errors</h2>
+
+<figure>
+<svg viewBox="0 0 560 300" role="img" aria-labelledby="fig2-t fig2-d" xmlns="http://www.w3.org/2000/svg">
+  <title id="fig2-t">Regression line with an error distribution drawn at each of two x values</title>
+  <desc id="fig2-d">A straight line rises from lower left to upper right. At two different x values, a bell-shaped curve is drawn sideways, centred on the line. Both curves have the same width, showing constant variance.</desc>
+  <line x1="60" y1="250" x2="470" y2="250" stroke="currentColor" stroke-width="2"/>
+  <line x1="60" y1="250" x2="60" y2="30" stroke="currentColor" stroke-width="2"/>
+  <polygon points="470,250 462,246 462,254" fill="currentColor"/>
+  <polygon points="60,30 56,38 64,38" fill="currentColor"/>
+  <text x="475" y="255" font-size="15" fill="currentColor">x</text>
+  <text x="40" y="30" font-size="15" fill="currentColor">y</text>
+  <line x1="80" y1="225" x2="430" y2="80" stroke="var(--pop)" stroke-width="3"/>
+  <text x="330" y="145" font-size="13" fill="var(--pop)">y = β₀ + β₁x</text>
+  <!-- vertical spread bars + bell curves at x = 160 and x = 300 -->
+  <line x1="160" y1="130" x2="160" y2="250" stroke="var(--err)" stroke-width="3"/>
+  <path d="M160 130 q 34 22 0 44 q -34 22 0 44 q 34 22 0 32" fill="none" stroke="var(--err)" stroke-width="2.5" stroke-dasharray="6 4"/>
+  <line x1="300" y1="72" x2="300" y2="192" stroke="var(--err)" stroke-width="3"/>
+  <path d="M300 72 q 34 22 0 44 q -34 22 0 44 q 34 22 0 32" fill="none" stroke="var(--err)" stroke-width="2.5" stroke-dasharray="6 4"/>
+  <text x="360" y="230" font-size="13" fill="var(--err)">distribution of εᵢ</text>
+  <line x1="356" y1="225" x2="318" y2="175" stroke="var(--err)" stroke-width="2"/>
+</svg>
+<figcaption>Figure 2. At every value of <em>x</em>, the response varies around the line according to the same error distribution.</figcaption>
+</figure>
+
+<details>
+  <summary>Long description of Figure 2</summary>
+  <p>A straight regression line <math alttext="y equals beta sub 0 plus beta sub 1 x"><mrow><mi>y</mi><mo>=</mo><msub><mi>β</mi><mn>0</mn></msub><mo>+</mo><msub><mi>β</mi><mn>1</mn></msub><mi>x</mi></mrow></math> rises from lower left to upper right. At two separate values of <em>x</em>, a sideways bell curve is drawn, centred on the line and spanning a vertical band of equal height at both locations. The equal width of the two curves illustrates the constant-variance assumption: the spread of <math alttext="epsilon sub i"><msub><mi>ε</mi><mi>i</mi></msub></math> is the same everywhere along the line, and the curves are centred on the line because the errors have mean zero.</p>
+</details>
+
+<h2 id="assumptions">Model assumptions</h2>
+
+<h3>What "simple" and "linear" mean</h3>
+
+<ol class="steps">
+  <li><strong>Simple:</strong> there is exactly <strong>one</strong> predictor, <em>x</em>.</li>
+  <li><strong>Linear:</strong> <math alttext="y sub i"><msub><mi>y</mi><mi>i</mi></msub></math> is a <strong>linear function of</strong> <math alttext="beta sub 0"><msub><mi>β</mi><mn>0</mn></msub></math> <strong>and</strong> <math alttext="beta sub 1"><msub><mi>β</mi><mn>1</mn></msub></math> — linear in the <em>parameters</em>, not necessarily in <em>x</em>.</li>
+</ol>
+
+<h3>Assumptions on the errors</h3>
+
+<p><strong>Basic assumptions</strong> — the errors <math alttext="epsilon sub i"><msub><mi>ε</mi><mi>i</mi></msub></math> are random variables satisfying:</p>
+
+<ol class="steps" type="i">
+  <li>
+    <strong>Mean zero.</strong>
+    <math alttext="expected value of epsilon sub i equals 0">
+      <mrow><mi>E</mi><mo>(</mo><msub><mi>ε</mi><mi>i</mi></msub><mo>)</mo><mo>=</mo><mn>0</mn></mrow>
+    </math>
+  </li>
+  <li>
+    <strong>Constant variance</strong> (homoscedasticity).
+    <math alttext="variance of epsilon sub i equals sigma squared">
+      <mrow><mi>Var</mi><mo>(</mo><msub><mi>ε</mi><mi>i</mi></msub><mo>)</mo><mo>=</mo><msup><mi>σ</mi><mn>2</mn></msup></mrow>
+    </math>
+    — the same <math alttext="sigma squared"><msup><mi>σ</mi><mn>2</mn></msup></math> for every observation.
+  </li>
+  <li>
+    <strong>Uncorrelated errors.</strong>
+    <math alttext="covariance of epsilon sub i and epsilon sub j equals 0 for i not equal to j">
+      <mrow><mi>Cov</mi><mo>(</mo><msub><mi>ε</mi><mi>i</mi></msub><mo>,</mo><msub><mi>ε</mi><mi>j</mi></msub><mo>)</mo><mo>=</mo><mn>0</mn><mo lspace="1em">,</mo><mspace width="0.5em"></mspace><mi>i</mi><mo>≠</mo><mi>j</mi></mrow>
+    </math>
+  </li>
+</ol>
+
+<p><strong>Classical (additional) assumption</strong> — useful for inference:</p>
+
+<ol class="steps" type="i" start="4">
+  <li>
+    <strong>Normality.</strong>
+    <math alttext="epsilon sub i is distributed normal with mean 0 and variance sigma squared">
+      <mrow><msub><mi>ε</mi><mi>i</mi></msub><mo>∼</mo><mi>N</mi><mo>(</mo><mn>0</mn><mo>,</mo><msup><mi>σ</mi><mn>2</mn></msup><mo>)</mo></mrow>
+    </math>
+  </li>
+</ol>
+
+<div class="note">
+  <p>Assumptions (i)–(iii) are enough to get the least squares estimates and their variances. Assumption (iv) is what lets you build confidence intervals and run hypothesis tests.</p>
+</div>
+
+<h2 id="regfun">The regression function</h2>
+
+<p>The regression function is the conditional mean of the response given the predictor:</p>
+
+<div class="eq">
+<math display="block" alttext="g of x equals the expected value of y given X equals x, which equals beta sub 0 plus beta sub 1 x">
+  <mrow>
+    <mi>g</mi><mo>(</mo><mi>x</mi><mo>)</mo>
+    <mo>=</mo>
+    <mi>E</mi><mo>(</mo><mi>y</mi><mo>∣</mo><mi>X</mi><mo>=</mo><mi>x</mi><mo>)</mo>
+    <mo>=</mo>
+    <msub><mi>β</mi><mn>0</mn></msub><mo>+</mo><msub><mi>β</mi><mn>1</mn></msub><mi>x</mi>
+  </mrow>
+</math>
+</div>
+
+<h2 id="lsq">Estimating the coefficients: least squares</h2>
+
+<p>We need to estimate <math alttext="beta sub 0"><msub><mi>β</mi><mn>0</mn></msub></math> and <math alttext="beta sub 1"><msub><mi>β</mi><mn>1</mn></msub></math>. <strong>How?</strong> Use the <strong>least squares principle</strong>.</p>
+
+<figure>
+<svg viewBox="0 0 560 280" role="img" aria-labelledby="fig3-t fig3-d" xmlns="http://www.w3.org/2000/svg">
+  <title id="fig3-t">Data points with vertical residual segments to the fitted line</title>
+  <desc id="fig3-d">Five data points sit above and below a rising straight line. A short vertical segment joins each point to the line, representing the residual for that observation.</desc>
+  <line x1="60" y1="230" x2="470" y2="230" stroke="currentColor" stroke-width="2"/>
+  <line x1="60" y1="230" x2="60" y2="25" stroke="currentColor" stroke-width="2"/>
+  <polygon points="470,230 462,226 462,234" fill="currentColor"/>
+  <polygon points="60,25 56,33 64,33" fill="currentColor"/>
+  <text x="475" y="235" font-size="15" fill="currentColor">x</text>
+  <text x="40" y="26" font-size="15" fill="currentColor">y</text>
+  <line x1="80" y1="205" x2="420" y2="60" stroke="var(--est)" stroke-width="3"/>
+  <g stroke="var(--err)" stroke-width="3">
+    <line x1="130" y1="184" x2="130" y2="150"/>
+    <line x1="190" y1="159" x2="190" y2="190"/>
+    <line x1="250" y1="133" x2="250" y2="105"/>
+    <line x1="310" y1="108" x2="310" y2="140"/>
+    <line x1="370" y1="82" x2="370" y2="48"/>
+  </g>
+  <g fill="currentColor">
+    <circle cx="130" cy="150" r="4.5"/><circle cx="190" cy="190" r="4.5"/>
+    <circle cx="250" cy="105" r="4.5"/><circle cx="310" cy="140" r="4.5"/>
+    <circle cx="370" cy="48" r="4.5"/>
+  </g>
+  <text x="330" y="215" font-size="13" fill="var(--err)">minimise these</text>
+  <line x1="345" y1="205" x2="318" y2="150" stroke="var(--err)" stroke-width="2"/>
+</svg>
+<figcaption>Figure 3. Least squares chooses the line that makes the squared vertical distances as small as possible.</figcaption>
+</figure>
+
+<details>
+  <summary>Long description of Figure 3</summary>
+  <p>A straight line rises from lower left to upper right through a set of five data points. Each point is connected to the line by a short vertical segment. Some points sit above the line and some below. These vertical gaps are the quantities we try to make small; least squares makes the <em>sum of their squares</em> as small as possible.</p>
+</details>
+
+<p>Minimise the sum of squared errors:</p>
+
+<div class="eq">
+<math display="block" alttext="Q of beta sub 0 and beta sub 1 equals the sum from i equals 1 to n of epsilon sub i squared, which equals the sum from i equals 1 to n of the quantity y sub i minus open paren beta sub 0 plus beta sub 1 x sub i close paren, all squared">
+  <mrow>
+    <mi>Q</mi><mo>(</mo><msub><mi>β</mi><mn>0</mn></msub><mo>,</mo><msub><mi>β</mi><mn>1</mn></msub><mo>)</mo>
+    <mo>=</mo>
+    <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover>
+    <msubsup><mi>ε</mi><mi>i</mi><mn>2</mn></msubsup>
+    <mo>=</mo>
+    <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover>
+    <msup>
+      <mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><mo>(</mo><msub><mi>β</mi><mn>0</mn></msub><mo>+</mo><msub><mi>β</mi><mn>1</mn></msub><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo><mo>)</mo></mrow>
+      <mn>2</mn>
+    </msup>
+  </mrow>
+</math>
+</div>
+
+<figure>
+<svg viewBox="0 0 480 280" role="img" aria-labelledby="fig4-t fig4-d" xmlns="http://www.w3.org/2000/svg">
+  <title id="fig4-t">Bowl-shaped surface of Q plotted over the two coefficients</title>
+  <desc id="fig4-d">Three axes: Q pointing up, beta zero to the right, beta one going back into the page. A bowl-shaped surface opens upward, and dashed lines drop from its lowest point down to the coefficient axes, marking the minimising values.</desc>
+  <line x1="60" y1="240" x2="60" y2="25" stroke="currentColor" stroke-width="2"/>
+  <polygon points="60,25 56,33 64,33" fill="currentColor"/>
+  <text x="34" y="26" font-size="15" fill="currentColor">Q</text>
+  <line x1="60" y1="200" x2="400" y2="200" stroke="currentColor" stroke-width="2"/>
+  <polygon points="400,200 392,196 392,204" fill="currentColor"/>
+  <text x="405" y="205" font-size="15" fill="currentColor">β₀</text>
+  <line x1="60" y1="200" x2="215" y2="55" stroke="currentColor" stroke-width="2"/>
+  <polygon points="215,55 208,58 212,64" fill="currentColor"/>
+  <text x="220" y="52" font-size="15" fill="currentColor">β₁</text>
+  <g fill="none" stroke="var(--err)" stroke-width="2.5">
+    <path d="M170 60 Q 250 200 330 60"/>
+    <ellipse cx="250" cy="60" rx="80" ry="16"/>
+    <ellipse cx="250" cy="105" rx="58" ry="12"/>
+    <ellipse cx="250" cy="140" rx="38" ry="9"/>
+  </g>
+  <circle cx="250" cy="163" r="4.5" fill="var(--pop)"/>
+  <g stroke="var(--pop)" stroke-width="2" stroke-dasharray="5 4">
+    <line x1="250" y1="163" x2="250" y2="200"/>
+    <line x1="250" y1="163" x2="140" y2="163"/>
+  </g>
+  <text x="255" y="222" font-size="13" fill="var(--pop)">β̂₀</text>
+  <text x="105" y="160" font-size="13" fill="var(--pop)">β̂₁</text>
+</svg>
+<figcaption>Figure 4. <math alttext="Q"><mi>Q</mi></math> is a bowl-shaped (convex) function of the two coefficients, so it has a single minimum.</figcaption>
+</figure>
+
+<details>
+  <summary>Long description of Figure 4</summary>
+  <p>Three axes are drawn: <math alttext="Q"><mi>Q</mi></math> vertically, <math alttext="beta sub 0"><msub><mi>β</mi><mn>0</mn></msub></math> horizontally to the right, and <math alttext="beta sub 1"><msub><mi>β</mi><mn>1</mn></msub></math> receding diagonally into the page. Above the plane sits a bowl-shaped surface (a paraboloid) that opens upward, shown as a parabola with a few nested elliptical contour rings. The bottom of the bowl is a single point. Dashed lines drop from that point to the <math alttext="beta sub 0"><msub><mi>β</mi><mn>0</mn></msub></math> and <math alttext="beta sub 1"><msub><mi>β</mi><mn>1</mn></msub></math> axes, marking the coefficient values that minimise <math alttext="Q"><mi>Q</mi></math>. Because the surface is convex, setting both partial derivatives to zero locates the unique minimum.</p>
+</details>
+
+<h2 id="partials">Setting the partial derivatives to zero</h2>
+
+<p>At the minimum, both partial derivatives vanish:</p>
+
+<div class="eq">
+<math display="block" alttext="partial derivative of Q with respect to beta sub 0 equals 0, and partial derivative of Q with respect to beta sub 1 equals 0">
+  <mrow>
+    <mfrac><mrow><mo>∂</mo><mi>Q</mi></mrow><mrow><mo>∂</mo><msub><mi>β</mi><mn>0</mn></msub></mrow></mfrac>
+    <mo>=</mo><mn>0</mn>
+    <mspace width="2.5em"></mspace>
+    <mfrac><mrow><mo>∂</mo><mi>Q</mi></mrow><mrow><mo>∂</mo><msub><mi>β</mi><mn>1</mn></msub></mrow></mfrac>
+    <mo>=</mo><mn>0</mn>
+  </mrow>
+</math>
+</div>
+
+<h3>Derivative with respect to the intercept</h3>
+
+<div class="eq">
+<math display="block" alttext="partial Q over partial beta sub 0 equals the derivative with respect to beta sub 0 of the sum from i equals 1 to n of the quantity y sub i minus beta sub 0 minus beta sub 1 x sub i squared">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd><mfrac><mrow><mo>∂</mo><mi>Q</mi></mrow><mrow><mo>∂</mo><msub><mi>β</mi><mn>0</mn></msub></mrow></mfrac></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <mfrac><mo>∂</mo><mrow><mo>∂</mo><msub><mi>β</mi><mn>0</mn></msub></mrow></mfrac>
+          <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover>
+          <msup><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><msub><mi>β</mi><mn>0</mn></msub><mo>−</mo><msub><mi>β</mi><mn>1</mn></msub><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow><mn>2</mn></msup>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover>
+          <mfrac><mo>∂</mo><mrow><mo>∂</mo><msub><mi>β</mi><mn>0</mn></msub></mrow></mfrac>
+          <msup><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><msub><mi>β</mi><mn>0</mn></msub><mo>−</mo><msub><mi>β</mi><mn>1</mn></msub><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow><mn>2</mn></msup>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover>
+          <mn>2</mn>
+          <mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><msub><mi>β</mi><mn>0</mn></msub><mo>−</mo><msub><mi>β</mi><mn>1</mn></msub><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow>
+          <mrow><mo>(</mo><mn>0</mn><mo>−</mo><mn>1</mn><mo>−</mo><mn>0</mn><mo>)</mo></mrow>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <mo>−</mo><mn>2</mn>
+          <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover>
+          <mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><msub><mi>β</mi><mn>0</mn></msub><mo>−</mo><msub><mi>β</mi><mn>1</mn></msub><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow>
+          <mo>=</mo><mn>0</mn>
+        </mrow>
+      </mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<p class="lede">The third line is the <strong>chain rule</strong>: differentiate the square, then multiply by the derivative of the inside, which is <math alttext="negative 1"><mrow><mo>−</mo><mn>1</mn></mrow></math>.</p>
+
+<h3>Derivative with respect to the slope</h3>
+
+<div class="eq">
+<math display="block" alttext="partial Q over partial beta sub 1 equals negative 2 times the sum from i equals 1 to n of the quantity y sub i minus beta sub 0 minus beta sub 1 x sub i, times x sub i, equals 0">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd><mfrac><mrow><mo>∂</mo><mi>Q</mi></mrow><mrow><mo>∂</mo><msub><mi>β</mi><mn>1</mn></msub></mrow></mfrac></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover>
+          <mfrac><mo>∂</mo><mrow><mo>∂</mo><msub><mi>β</mi><mn>1</mn></msub></mrow></mfrac>
+          <msup><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><msub><mi>β</mi><mn>0</mn></msub><mo>−</mo><msub><mi>β</mi><mn>1</mn></msub><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow><mn>2</mn></msup>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover>
+          <mn>2</mn>
+          <mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><msub><mi>β</mi><mn>0</mn></msub><mo>−</mo><msub><mi>β</mi><mn>1</mn></msub><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow>
+          <mo>·</mo>
+          <mrow><mo>(</mo><mn>0</mn><mo>−</mo><mn>0</mn><mo>−</mo><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <mo>−</mo><mn>2</mn>
+          <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover>
+          <mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><msub><mi>β</mi><mn>0</mn></msub><mo>−</mo><msub><mi>β</mi><mn>1</mn></msub><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow>
+          <msub><mi>x</mi><mi>i</mi></msub>
+          <mo>=</mo><mn>0</mn>
+        </mrow>
+      </mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<h2 id="solve">Solving for the estimates</h2>
+
+<h3>Solving the intercept equation</h3>
+
+<p>Start from the first normal equation and use <math alttext="y bar equals one over n times the sum of y sub i"><mrow><mover><mi>y</mi><mo>‾</mo></mover><mo>=</mo><mfrac><mn>1</mn><mi>n</mi></mfrac><mo>∑</mo><msub><mi>y</mi><mi>i</mi></msub></mrow></math>:</p>
+
+<div class="eq">
+<math display="block" alttext="Step by step: negative 2 sum of y sub i minus beta sub 0 minus beta sub 1 x sub i equals 0; then sum y sub i minus sum beta sub 0 minus sum beta sub 1 x sub i equals 0; then n y bar minus n beta sub 0 minus n beta sub 1 x bar equals 0; therefore beta sub 0 equals y bar minus beta sub 1 x bar">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd>
+        <mrow><mo>−</mo><mn>2</mn>
+        <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover>
+        <mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><msub><mi>β</mi><mn>0</mn></msub><mo>−</mo><msub><mi>β</mi><mn>1</mn></msub><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow></mrow>
+      </mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><mn>0</mn></mtd>
+    </mtr>
+    <mtr>
+      <mtd>
+        <mrow>
+          <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><msub><mi>y</mi><mi>i</mi></msub>
+          <mo>−</mo>
+          <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><msub><mi>β</mi><mn>0</mn></msub>
+          <mo>−</mo>
+          <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><msub><mi>β</mi><mn>1</mn></msub><msub><mi>x</mi><mi>i</mi></msub>
+        </mrow>
+      </mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><mn>0</mn></mtd>
+    </mtr>
+    <mtr>
+      <mtd>
+        <mrow><mi>n</mi><mover><mi>y</mi><mo>‾</mo></mover>
+        <mo>−</mo><mi>n</mi><msub><mi>β</mi><mn>0</mn></msub>
+        <mo>−</mo><mi>n</mi><msub><mi>β</mi><mn>1</mn></msub><mover><mi>x</mi><mo>‾</mo></mover></mrow>
+      </mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><mn>0</mn></mtd>
+    </mtr>
+    <mtr>
+      <mtd>
+        <mrow><mover><mi>y</mi><mo>‾</mo></mover><mo>−</mo><msub><mi>β</mi><mn>1</mn></msub><mover><mi>x</mi><mo>‾</mo></mover></mrow>
+      </mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><msub><mi>β</mi><mn>0</mn></msub></mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<h3>Solving the slope equation</h3>
+
+<p>Substitute <math alttext="beta sub 0 equals y bar minus beta sub 1 x bar"><mrow><msub><mi>β</mi><mn>0</mn></msub><mo>=</mo><mover><mi>y</mi><mo>‾</mo></mover><mo>−</mo><msub><mi>β</mi><mn>1</mn></msub><mover><mi>x</mi><mo>‾</mo></mover></mrow></math> into the second normal equation and collect terms:</p>
+
+<div class="eq">
+<math display="block" alttext="Sum of y sub i x sub i minus beta sub 0 sum x sub i minus beta sub 1 sum x sub i squared equals zero; substituting and simplifying gives sum x sub i y sub i minus n y bar x bar equals beta sub 1 times the quantity sum x sub i squared minus n x bar squared">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd>
+        <mrow>
+          <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><msub><mi>y</mi><mi>i</mi></msub><msub><mi>x</mi><mi>i</mi></msub>
+          <mo>−</mo><msub><mi>β</mi><mn>0</mn></msub>
+          <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><msub><mi>x</mi><mi>i</mi></msub>
+          <mo>−</mo><msub><mi>β</mi><mn>1</mn></msub>
+          <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><msubsup><mi>x</mi><mi>i</mi><mn>2</mn></msubsup>
+        </mrow>
+      </mtd>
+      <mtd><mo>=</mo></mtd><mtd><mn>0</mn></mtd>
+    </mtr>
+    <mtr>
+      <mtd>
+        <mrow>
+          <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><msub><mi>y</mi><mi>i</mi></msub><msub><mi>x</mi><mi>i</mi></msub>
+          <mo>−</mo>
+          <mrow><mo>(</mo><mover><mi>y</mi><mo>‾</mo></mover><mo>−</mo><msub><mi>β</mi><mn>1</mn></msub><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow>
+          <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><msub><mi>x</mi><mi>i</mi></msub>
+          <mo>−</mo><msub><mi>β</mi><mn>1</mn></msub>
+          <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><msubsup><mi>x</mi><mi>i</mi><mn>2</mn></msubsup>
+        </mrow>
+      </mtd>
+      <mtd><mo>=</mo></mtd><mtd><mn>0</mn></mtd>
+    </mtr>
+    <mtr>
+      <mtd>
+        <mrow>
+          <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><msub><mi>x</mi><mi>i</mi></msub><msub><mi>y</mi><mi>i</mi></msub>
+          <mo>−</mo><mi>n</mi><mover><mi>y</mi><mo>‾</mo></mover><mover><mi>x</mi><mo>‾</mo></mover>
+          <mo>+</mo><mi>n</mi><msub><mi>β</mi><mn>1</mn></msub><msup><mover><mi>x</mi><mo>‾</mo></mover><mn>2</mn></msup>
+          <mo>−</mo><msub><mi>β</mi><mn>1</mn></msub>
+          <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><msubsup><mi>x</mi><mi>i</mi><mn>2</mn></msubsup>
+        </mrow>
+      </mtd>
+      <mtd><mo>=</mo></mtd><mtd><mn>0</mn></mtd>
+    </mtr>
+    <mtr>
+      <mtd>
+        <mrow>
+          <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><msub><mi>x</mi><mi>i</mi></msub><msub><mi>y</mi><mi>i</mi></msub>
+          <mo>−</mo><mi>n</mi><mover><mi>y</mi><mo>‾</mo></mover><mover><mi>x</mi><mo>‾</mo></mover>
+        </mrow>
+      </mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow><msub><mi>β</mi><mn>1</mn></msub>
+        <mrow><mo>(</mo>
+          <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><msubsup><mi>x</mi><mi>i</mi><mn>2</mn></msubsup>
+          <mo>−</mo><mi>n</mi><msup><mover><mi>x</mi><mo>‾</mo></mover><mn>2</mn></msup>
+        <mo>)</mo></mrow></mrow>
+      </mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<h3>The least squares estimators</h3>
+
+<div class="eq">
+<math display="block" alttext="beta hat sub 1 equals the sum from i equals 1 to n of x sub i y sub i minus n y bar x bar, all divided by the sum from i equals 1 to n of x sub i squared minus n x bar squared">
+  <mrow>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub>
+    <mo>=</mo>
+    <mfrac>
+      <mrow>
+        <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><msub><mi>x</mi><mi>i</mi></msub><msub><mi>y</mi><mi>i</mi></msub>
+        <mo>−</mo><mi>n</mi><mover><mi>y</mi><mo>‾</mo></mover><mover><mi>x</mi><mo>‾</mo></mover>
+      </mrow>
+      <mrow>
+        <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><msubsup><mi>x</mi><mi>i</mi><mn>2</mn></msubsup>
+        <mo>−</mo><mi>n</mi><msup><mover><mi>x</mi><mo>‾</mo></mover><mn>2</mn></msup>
+      </mrow>
+    </mfrac>
+  </mrow>
+</math>
+</div>
+
+<div class="eq">
+<math display="block" alttext="beta hat sub 0 equals y bar minus beta hat sub 1 times x bar">
+  <mrow>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub>
+    <mo>=</mo>
+    <mover><mi>y</mi><mo>‾</mo></mover>
+    <mo>−</mo>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub>
+    <mover><mi>x</mi><mo>‾</mo></mover>
+  </mrow>
+</math>
+</div>
+
+<div class="note">
+  <p><strong>Note.</strong> Estimate the slope first, then plug it into the intercept formula. Because <math alttext="beta hat sub 0 equals y bar minus beta hat sub 1 x bar"><mrow><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>=</mo><mover><mi>y</mi><mo>‾</mo></mover><mo>−</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mover><mi>x</mi><mo>‾</mo></mover></mrow></math>, the fitted line always passes through the point of means <math alttext="open paren x bar comma y bar close paren"><mrow><mo>(</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>,</mo><mover><mi>y</mi><mo>‾</mo></mover><mo>)</mo></mrow></math>.</p>
+</div>
+
+<h2 id="next">Coming next</h2>
+
+<p><strong>Ordinary Least Squares Regression.</strong></p>
+
+</main>
+
+<footer>
+  <p>Transcribed from the handwritten notes <em>LR_week_1_day_1.pdf</em>. Equations are MathML; figures are inline SVG with title, description, and an expandable long description. Conforms to WCAG 2.2 Level AA.</p>
+</footer>
+</div>
+</body>
+</html>
