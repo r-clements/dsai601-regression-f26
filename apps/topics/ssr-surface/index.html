@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SSR Surface — DSAI 601</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      max-width: 980px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+      color: #222;
+    }
+    a.back { font-size: 0.9rem; color: #1a5fb4; text-decoration: none; }
+    h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+    p.instructions { color: #555; font-size: 0.95rem; margin-top: 0; }
+    p.a11y-instructions {
+      border-left: 3px solid #1a5fb4;
+      padding-left: 0.75rem;
+      margin-top: 0.5rem;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1.25rem;
+      margin: 0.75rem 0 1.25rem;
+      padding: 0.75rem 1rem;
+      background: #f7f7f8;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    .controls button {
+      padding: 0.4rem 0.8rem;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    .slider-group { display: flex; align-items: center; gap: 0.5rem; }
+    .slider-group input[type="range"] { width: 200px; }
+    .slider-group output { font-weight: 600; min-width: 3.5rem; display: inline-block; }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    #scatter-panel, #bowl-panel, #contour-panel {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .panel-cell h3 { font-size: 0.95rem; margin: 0 0 0.4rem 0.1rem; color: #333; }
+
+    #stats { font-size: 0.95rem; margin: 0 0 1.25rem; }
+    #stats .stat { margin-right: 0.5rem; }
+    #stats .stat:not(:last-child)::after { content: " | "; color: #999; font-weight: 400; }
+    #stats .stat-value { font-weight: 600; }
+
+    .point { fill: #1a5fb4; }
+    .fit-line { stroke: #c01c28; stroke-width: 2; }
+    .residual { stroke: #999; stroke-dasharray: 3 3; }
+    .axis-label { font-size: 0.75rem; fill: #555; }
+
+    .surface-line { stroke: #1a5fb4; stroke-opacity: 0.5; fill: none; }
+    .current-marker { fill: #c01c28; stroke: #fff; stroke-width: 1px; }
+    .optimum-marker { stroke: #1a5fb4; stroke-width: 2.5px; fill: none; }
+
+    .contour-legend-label { font-size: 0.75rem; fill: #555; }
+  </style>
+</head>
+<body>
+  <a class="back" href="../../">&larr; All topics</a>
+  <h1>The Sum of Squared Residuals as a Surface</h1>
+  <p id="instructions" class="instructions">
+    For simple linear regression, the sum of squared residuals (SSR) is a function of the two
+    coefficients β₀ and β₁ — not just a single number. Use the sliders to choose a value of
+    (β₀, β₁); the fitted line updates in the left panel, and a red dot marks where that choice
+    sits on the SSR surface (right, rotatable) and on the same surface viewed from above as a
+    contour map (far right). The blue ring marks the least-squares optimum — the bottom of the bowl.
+  </p>
+  <p id="a11y-instructions" class="instructions a11y-instructions">
+    Keyboard and screen reader users: the β₀ and β₁ sliders are the primary controls — both are
+    standard sliders operable with the arrow keys once focused. The 3D surface panel can also be
+    rotated by dragging with a mouse, but this is a supplementary view; all information is
+    available through the sliders and the stats line below the panels.
+  </p>
+
+  <div class="controls">
+    <button id="regenerate">New simulated data</button>
+    <button id="snap-optimum">Snap to least-squares optimum</button>
+    <div class="slider-group">
+      <label for="b0-slider">β₀</label>
+      <input type="range" id="b0-slider" aria-describedby="instructions a11y-instructions">
+      <output id="b0-readout" for="b0-slider">–</output>
+    </div>
+    <div class="slider-group">
+      <label for="b1-slider">β₁</label>
+      <input type="range" id="b1-slider" aria-describedby="instructions a11y-instructions">
+      <output id="b1-readout" for="b1-slider">–</output>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="panel-cell">
+      <h3>Data and the line for the current (β₀, β₁)</h3>
+      <div id="scatter-panel"></div>
+    </div>
+    <div class="panel-cell">
+      <h3>SSR(β₀, β₁) surface — drag to rotate</h3>
+      <div id="bowl-panel"></div>
+    </div>
+  </div>
+  <div class="row" style="grid-template-columns: 1fr;">
+    <div class="panel-cell">
+      <h3>SSR(β₀, β₁) contour map (top-down view of the same surface)</h3>
+      <div id="contour-panel"></div>
+    </div>
+  </div>
+
+  <div id="stats" aria-live="polite" aria-atomic="true">
+    <span class="stat">β₀ = <span id="cur-b0" class="stat-value">–</span></span>
+    <span class="stat">β₁ = <span id="cur-b1" class="stat-value">–</span></span>
+    <span class="stat">SSR = <span id="cur-ssr" class="stat-value">–</span></span>
+    <span class="stat">optimum: β₀ = <span id="opt-b0" class="stat-value">–</span></span>
+    <span class="stat">β₁ = <span id="opt-b1" class="stat-value">–</span></span>
+    <span class="stat">min SSR = <span id="opt-ssr" class="stat-value">–</span></span>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
