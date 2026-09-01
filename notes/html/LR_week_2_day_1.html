@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Properties of the Least Squares Estimators — Week 2, Day 1 | DSAI 601</title>
+<meta name="description" content="Accessible class notes on the properties of the least squares estimators: the Gauss-Markov theorem, unbiasedness, the BLUE property, SSX and SSXY notation, and the sampling distributions of the intercept and slope.">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --muted: #4a4a4a;
+    --rule: #c9c9c9;
+    --accent: #0b4f8a;
+    --accent-bg: #eef4fa;
+    --focus: #0b4f8a;
+    --pop: #a4262c;   /* population / true  — 5.9:1 on white */
+    --est: #5b2d8e;   /* estimate / fitted  — 8.5:1 on white */
+    --err: #8a5000;   /* errors / residuals — 5.1:1 on white */
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #f2f2f2; --muted: #cfcfcf; --rule: #555;
+      --accent: #8ab8e0; --accent-bg: #182430; --focus: #8ab8e0;
+      --pop: #ff9f99; --est: #cbb0ff; --err: #f0b458;
+    }
+    body { background: #131313; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 1.0625rem;
+    line-height: 1.65;
+    color: var(--ink);
+    background: #fff;
+  }
+  @media (prefers-color-scheme: dark) { body { background: #131313; } }
+  .wrap { max-width: 46rem; margin: 0 auto; padding: 1.5rem 1.25rem 5rem; }
+  a { color: var(--accent); }
+  a:focus-visible, summary:focus-visible, :focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+  .skip {
+    position: absolute; left: -9999px; top: 0;
+    background: var(--accent); color: #fff;
+    padding: .75rem 1rem; z-index: 10; text-decoration: none;
+  }
+  .skip:focus { left: .5rem; top: .5rem; }
+  h1 { font-size: 1.85rem; line-height: 1.25; margin: 0 0 .25rem; }
+  h2 { font-size: 1.35rem; line-height: 1.3; margin: 2.5rem 0 .5rem;
+       padding-top: .75rem; border-top: 2px solid var(--rule); }
+  h3 { font-size: 1.1rem; margin: 1.75rem 0 .4rem; }
+  p, li { max-width: 42rem; }
+  .lede { color: var(--muted); margin-top: 0; }
+  nav.toc {
+    background: var(--accent-bg); border: 1px solid var(--rule);
+    border-radius: 8px; padding: 1rem 1.25rem; margin: 2rem 0;
+  }
+  nav.toc h2 { font-size: 1.05rem; margin: 0 0 .5rem; border: 0; padding: 0; }
+  nav.toc ol { margin: 0; padding-left: 1.25rem; }
+  nav.toc li { margin: .3rem 0; }
+  nav.toc a { display: inline-block; min-height: 24px; padding: 2px 0; }
+  table { border-collapse: collapse; margin: 1rem 0; width: 100%; }
+  caption { text-align: left; font-weight: 600; padding-bottom: .5rem; }
+  th, td { border: 1px solid var(--rule); padding: .5rem .7rem; text-align: left; }
+  thead th { background: var(--accent-bg); }
+  figure { margin: 1.5rem 0; }
+  figcaption { font-size: .95rem; color: var(--muted); margin-top: .5rem; }
+  svg { max-width: 100%; height: auto; display: block; }
+  details {
+    border: 1px solid var(--rule); border-radius: 6px;
+    padding: .5rem .85rem; margin: .75rem 0; background: var(--accent-bg);
+  }
+  summary { cursor: pointer; font-weight: 600; min-height: 24px; padding: .25rem 0; }
+  details[open] summary { margin-bottom: .5rem; }
+  math { font-size: 1.15em; }
+  math[display="block"] { margin: 1rem 0; overflow-x: auto; overflow-y: hidden; }
+  .eq { margin: 1.25rem 0; }
+  .note {
+    border-left: 4px solid var(--accent); background: var(--accent-bg);
+    padding: .75rem 1rem; margin: 1.25rem 0; border-radius: 0 6px 6px 0;
+  }
+  .note > :first-child { margin-top: 0; }
+  .note > :last-child { margin-bottom: 0; }
+  .tag {
+    display: inline-block; font-size: .8rem; font-weight: 700;
+    letter-spacing: .02em; text-transform: uppercase;
+    border: 1px solid currentColor; border-radius: 4px;
+    padding: 0 .4em; white-space: nowrap;
+  }
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 2px solid var(--rule);
+           color: var(--muted); font-size: .95rem; }
+  ol.steps { padding-left: 1.4rem; }
+  ol.steps > li { margin: .75rem 0; }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+
+<div class="wrap">
+<header>
+  <p class="lede"><strong>DSAI 601 — Regression</strong> · Fall 2026 · Week 2, Day 1</p>
+  <h1>Properties of the Least Squares Estimators</h1>
+  <p class="lede">Accessible transcription of the handwritten class notes. All equations are marked up in MathML so they can be read by a screen reader, magnified, or rendered in braille. All figures have text descriptions. Annotations that were written in a second pen colour in the original are reproduced here as labelled callouts, so none of their meaning depends on colour.</p>
+</header>
+
+<nav class="toc" aria-labelledby="toc-h">
+  <h2 id="toc-h">On this page</h2>
+  <ol>
+    <li><a href="#missed">Something we missed: the line passes through the means</a></li>
+    <li><a href="#recap">I. Recap</a></li>
+    <li><a href="#props">II. Properties of the least squares estimates</a></li>
+    <li><a href="#gm">The Gauss–Markov theorem</a></li>
+    <li><a href="#notation">Notation: SSX, SSXY, and a lemma</a></li>
+    <li><a href="#lemma-proof">Proof of the lemma</a></li>
+    <li><a href="#unbiased-proof">Proving the slope is unbiased</a></li>
+    <li><a href="#variance">The variance of the slope estimator</a></li>
+    <li><a href="#blue-proof">Showing the least squares slope is best</a></li>
+    <li><a href="#summary">III. Summarize</a></li>
+    <li><a href="#sampling">IV. Sampling distributions</a></li>
+  </ol>
+</nav>
+
+<main id="main">
+
+<h2 id="missed">Something we missed: the line passes through the means</h2>
+
+<p>Start from the closed-form intercept:</p>
+
+<div class="eq">
+<math display="block" alttext="beta sub 0 equals y bar minus beta sub 1 times x bar">
+  <mrow>
+    <msub><mi>β</mi><mn>0</mn></msub>
+    <mo>=</mo>
+    <mover><mi>y</mi><mo>‾</mo></mover>
+    <mo>−</mo>
+    <msub><mi>β</mi><mn>1</mn></msub>
+    <mover><mi>x</mi><mo>‾</mo></mover>
+  </mrow>
+</math>
+</div>
+
+<p>Rearranging it gives</p>
+
+<div class="eq">
+<math display="block" alttext="y bar equals beta sub 0 plus beta sub 1 times x bar">
+  <mrow>
+    <mover><mi>y</mi><mo>‾</mo></mover>
+    <mo>=</mo>
+    <msub><mi>β</mi><mn>0</mn></msub>
+    <mo>+</mo>
+    <msub><mi>β</mi><mn>1</mn></msub>
+    <mover><mi>x</mi><mo>‾</mo></mover>
+  </mrow>
+</math>
+</div>
+
+<div class="note">
+  <p><strong>The point of means is on the line.</strong> Because <math alttext="y bar equals beta sub 0 plus beta sub 1 x bar"><mrow><mover><mi>y</mi><mo>‾</mo></mover><mo>=</mo><msub><mi>β</mi><mn>0</mn></msub><mo>+</mo><msub><mi>β</mi><mn>1</mn></msub><mover><mi>x</mi><mo>‾</mo></mover></mrow></math>, the pair <math alttext="open paren x bar comma y bar close paren"><mrow><mo>(</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>,</mo><mover><mi>y</mi><mo>‾</mo></mover><mo>)</mo></mrow></math> satisfies the equation of the regression line — so <math alttext="open paren x bar comma y bar close paren"><mrow><mo>(</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>,</mo><mover><mi>y</mi><mo>‾</mo></mover><mo>)</mo></mrow></math> <em>is on the regression line</em>.</p>
+</div>
+
+<h2 id="recap">I. Recap</h2>
+
+<p>The simple linear regression model:</p>
+
+<div class="eq">
+<math display="block" alttext="y sub i equals beta sub 0 plus beta sub 1 times x sub i plus epsilon sub i">
+  <mrow>
+    <msub><mi>y</mi><mi>i</mi></msub>
+    <mo>=</mo>
+    <msub><mi>β</mi><mn>0</mn></msub>
+    <mo>+</mo>
+    <msub><mi>β</mi><mn>1</mn></msub>
+    <msub><mi>x</mi><mi>i</mi></msub>
+    <mo>+</mo>
+    <msub><mi>ε</mi><mi>i</mi></msub>
+  </mrow>
+</math>
+</div>
+
+<p>The least squares estimates are the pair that minimizes the criterion <math alttext="Q"><mi>Q</mi></math>:</p>
+
+<div class="eq">
+<math display="block" alttext="the pair beta hat sub 0, beta hat sub 1 equals the argmin over beta sub 0 and beta sub 1 of Q of beta sub 0 and beta sub 1">
+  <mrow>
+    <mo>(</mo>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub>
+    <mo>,</mo>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub>
+    <mo>)</mo>
+    <mo>=</mo>
+    <munder>
+      <mrow><mi>arg</mi><mspace width="0.15em"></mspace><mi>min</mi></mrow>
+      <mrow><msub><mi>β</mi><mn>0</mn></msub><mo>,</mo><msub><mi>β</mi><mn>1</mn></msub></mrow>
+    </munder>
+    <mi>Q</mi>
+    <mrow><mo>(</mo><msub><mi>β</mi><mn>0</mn></msub><mo>,</mo><msub><mi>β</mi><mn>1</mn></msub><mo>)</mo></mrow>
+  </mrow>
+</math>
+</div>
+
+<p>where</p>
+
+<div class="eq">
+<math display="block" alttext="Q of beta sub 0 and beta sub 1 equals the sum from i equals 1 to n of the quantity y sub i minus y hat sub i, squared, which equals the sum from i equals 1 to n of the quantity y sub i minus beta sub 0 minus beta sub 1 x sub i, squared">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd><mrow><mi>Q</mi><mo>(</mo><msub><mi>β</mi><mn>0</mn></msub><mo>,</mo><msub><mi>β</mi><mn>1</mn></msub><mo>)</mo></mrow></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover>
+          <msup><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub><mo>)</mo></mrow><mn>2</mn></msup>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover>
+          <msup><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><msub><mi>β</mi><mn>0</mn></msub><mo>−</mo><msub><mi>β</mi><mn>1</mn></msub><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow><mn>2</mn></msup>
+        </mrow>
+      </mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<p>This quantity is the <strong>sum of squared residuals</strong>, also written <strong>SSE</strong> / <strong>SSR</strong>.</p>
+
+<h3>Closed form solutions</h3>
+
+<div class="eq">
+<math display="block" alttext="beta hat sub 1 equals the fraction with numerator the sum over i of x sub i y sub i minus n x bar y bar, and denominator the sum over i of x sub i squared minus n x bar squared">
+  <mrow>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub>
+    <mo>=</mo>
+    <mfrac>
+      <mrow>
+        <munder><mo>∑</mo><mi>i</mi></munder><msub><mi>x</mi><mi>i</mi></msub><msub><mi>y</mi><mi>i</mi></msub>
+        <mo>−</mo><mi>n</mi><mover><mi>x</mi><mo>‾</mo></mover><mover><mi>y</mi><mo>‾</mo></mover>
+      </mrow>
+      <mrow>
+        <munder><mo>∑</mo><mi>i</mi></munder><msubsup><mi>x</mi><mi>i</mi><mn>2</mn></msubsup>
+        <mo>−</mo><mi>n</mi><msup><mover><mi>x</mi><mo>‾</mo></mover><mn>2</mn></msup>
+      </mrow>
+    </mfrac>
+  </mrow>
+</math>
+</div>
+
+<div class="eq">
+<math display="block" alttext="beta hat sub 0 equals y bar minus beta hat sub 1 times x bar">
+  <mrow>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub>
+    <mo>=</mo>
+    <mover><mi>y</mi><mo>‾</mo></mover>
+    <mo>−</mo>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub>
+    <mover><mi>x</mi><mo>‾</mo></mover>
+  </mrow>
+</math>
+</div>
+
+<div class="note">
+  <p><span class="tag" style="color:var(--pop)">Homework 1</span></p>
+  <p><strong>Show that</strong></p>
+  <math display="block" alttext="beta hat sub 1 equals the fraction with numerator the sum over i of the quantity x sub i minus x bar times the quantity y sub i minus y bar, and denominator the sum over i of the quantity x sub i minus x bar squared, which equals the covariance of x and y divided by the variance of x">
+    <mtable columnalign="right center left">
+      <mtr>
+        <mtd><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub></mtd>
+        <mtd><mo>=</mo></mtd>
+        <mtd>
+          <mfrac>
+            <mrow>
+              <munder><mo>∑</mo><mi>i</mi></munder>
+              <mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow>
+              <mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><mover><mi>y</mi><mo>‾</mo></mover><mo>)</mo></mrow>
+            </mrow>
+            <mrow>
+              <munder><mo>∑</mo><mi>i</mi></munder>
+              <msup><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow><mn>2</mn></msup>
+            </mrow>
+          </mfrac>
+        </mtd>
+      </mtr>
+      <mtr>
+        <mtd></mtd>
+        <mtd><mo>=</mo></mtd>
+        <mtd>
+          <mfrac>
+            <mrow><mi>Cov</mi><mo>(</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo>)</mo></mrow>
+            <mrow><mi>Var</mi><mo>(</mo><mi>x</mi><mo>)</mo></mrow>
+          </mfrac>
+        </mtd>
+      </mtr>
+    </mtable>
+  </math>
+  <p>Just show that <em>this</em> expression is equivalent to the one we derived.</p>
+</div>
+
+<h2 id="props">II. Properties of the least squares estimates</h2>
+
+<p>Least squares gave us <math alttext="beta hat sub 0"><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub></math> and <math alttext="beta hat sub 1"><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub></math>. <strong>Are these estimates good?</strong></p>
+
+<h2 id="gm">The Gauss–Markov theorem</h2>
+
+<p>Under the SLR assumptions, the least squares (LS) estimates <math alttext="beta hat sub 0"><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub></math> and <math alttext="beta hat sub 1"><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub></math> are:</p>
+
+<h3>1. Unbiased for the parameters</h3>
+
+<div class="eq">
+<math display="block" alttext="the expected value of beta hat sub 0 equals beta sub 0, and the expected value of beta hat sub 1 equals beta sub 1">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd><mrow><mi>E</mi><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>)</mo></mrow></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><msub><mi>β</mi><mn>0</mn></msub></mtd>
+    </mtr>
+    <mtr>
+      <mtd><mrow><mi>E</mi><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>)</mo></mrow></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><msub><mi>β</mi><mn>1</mn></msub></mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<figure>
+<svg viewBox="0 0 560 300" role="img" aria-labelledby="fig5-t fig5-d" xmlns="http://www.w3.org/2000/svg">
+  <title id="fig5-t">Sampling distribution of the estimated intercept, centred on the true intercept</title>
+  <desc id="fig5-d">A single bell-shaped curve drawn over a horizontal axis. The peak of the curve sits directly above a tick mark on the axis labelled beta zero, the true intercept. The axis itself is labelled beta zero hat, the estimated intercept.</desc>
+  <!-- axis -->
+  <line x1="60" y1="250" x2="500" y2="250" stroke="currentColor" stroke-width="2"/>
+  <!-- bell curve -->
+  <path d="M120,250 C 190,246 232,80 280,78 C 328,80 370,246 440,250"
+        fill="none" stroke="var(--est)" stroke-width="3"/>
+  <!-- peak marker down to the axis -->
+  <line x1="280" y1="78" x2="280" y2="250" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <line x1="280" y1="243" x2="280" y2="257" stroke="currentColor" stroke-width="2"/>
+  <circle cx="280" cy="78" r="4" fill="currentColor"/>
+  <text x="280" y="278" font-size="16" fill="currentColor" text-anchor="middle">β₀</text>
+  <text x="505" y="272" font-size="16" fill="currentColor" text-anchor="end">β̂₀</text>
+</svg>
+<figcaption>Figure 5. Over repeated samples the estimate <math alttext="beta hat sub 0"><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub></math> varies, but its distribution is centred exactly on the true value <math alttext="beta sub 0"><msub><mi>β</mi><mn>0</mn></msub></math> — that is what unbiasedness means.</figcaption>
+</figure>
+<details>
+  <summary>Long description of Figure 5</summary>
+  <p>The horizontal axis represents the possible values that the estimator <math alttext="beta hat sub 0"><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub></math> can take across repeated samples. A symmetric bell-shaped density is drawn above it. A dashed vertical line drops from the peak of the density to a tick on the axis, and that tick is labelled <math alttext="beta sub 0"><msub><mi>β</mi><mn>0</mn></msub></math>. The pedagogical point is that the centre of the sampling distribution coincides with the true parameter: individual estimates are sometimes too high and sometimes too low, but on average they are correct. Nothing in the figure says anything yet about how <em>wide</em> the distribution is — that is the subject of the next property.</p>
+</details>
+
+<h3>2. Best linear unbiased estimators (BLUE)</h3>
+
+<p>The LS estimators are the <strong>best linear unbiased estimators</strong> — "best" meaning smallest variance:</p>
+
+<div class="eq">
+<math display="block" alttext="the variance of beta hat sub 0 is less than or equal to the variance of beta tilde sub 0">
+  <mrow>
+    <mi>Var</mi><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>)</mo>
+    <mo>≤</mo>
+    <mi>Var</mi><mo>(</mo><msub><mover><mi>β</mi><mo>~</mo></mover><mn>0</mn></msub><mo>)</mo>
+  </mrow>
+</math>
+</div>
+
+<p>where <math alttext="beta tilde sub 0"><msub><mover><mi>β</mi><mo>~</mo></mover><mn>0</mn></msub></math> is <em>some other linear unbiased estimate</em>.</p>
+
+<figure>
+<svg viewBox="0 0 560 300" role="img" aria-labelledby="fig6-t fig6-d" xmlns="http://www.w3.org/2000/svg">
+  <title id="fig6-t">Two sampling distributions with the same centre and different spreads</title>
+  <desc id="fig6-d">Two bell-shaped curves are drawn over the same horizontal axis and share the same centre, marked beta zero. The solid, tall and narrow curve is the least squares estimator beta zero hat. The dashed, short and wide curve is another linear unbiased estimator beta zero tilde. Both are centred on beta zero, but the solid curve is much more tightly concentrated around it.</desc>
+  <!-- axis -->
+  <line x1="40" y1="250" x2="520" y2="250" stroke="currentColor" stroke-width="2"/>
+  <!-- wide curve: other linear unbiased estimator, dashed -->
+  <path d="M60,250 C 160,246 208,142 280,140 C 352,142 400,246 500,250"
+        fill="none" stroke="var(--est)" stroke-width="3" stroke-dasharray="9 6"/>
+  <!-- narrow curve: least squares, solid -->
+  <path d="M190,250 C 235,247 258,60 280,58 C 302,60 325,247 370,250"
+        fill="none" stroke="var(--pop)" stroke-width="3"/>
+  <!-- shared centre -->
+  <line x1="280" y1="243" x2="280" y2="257" stroke="currentColor" stroke-width="2"/>
+  <text x="280" y="278" font-size="16" fill="currentColor" text-anchor="middle">β₀</text>
+  <!-- labels with leader lines -->
+  <line x1="292" y1="66" x2="345" y2="50" stroke="currentColor" stroke-width="1.5"/>
+  <text x="350" y="48" font-size="15" fill="currentColor">β̂₀ (least squares, solid)</text>
+  <line x1="330" y1="150" x2="382" y2="122" stroke="currentColor" stroke-width="1.5"/>
+  <text x="387" y="118" font-size="15" fill="currentColor">β̃₀ (other, dashed)</text>
+</svg>
+<figcaption>Figure 6. Both estimators are unbiased — same centre — but the least squares estimator (solid) has the smaller variance, so it is more likely to land close to <math alttext="beta sub 0"><msub><mi>β</mi><mn>0</mn></msub></math>.</figcaption>
+</figure>
+<details>
+  <summary>Long description of Figure 6</summary>
+  <p>Two densities are drawn on a common horizontal axis, both centred on the same tick, labelled <math alttext="beta sub 0"><msub><mi>β</mi><mn>0</mn></msub></math>. The first is drawn with a solid stroke and is tall and narrow: this is the sampling distribution of the least squares estimator <math alttext="beta hat sub 0"><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub></math>. The second is drawn with a dashed stroke and is short and wide: this is the sampling distribution of some other linear unbiased estimator <math alttext="beta tilde sub 0"><msub><mover><mi>β</mi><mo>~</mo></mover><mn>0</mn></msub></math>. Because both are unbiased, the comparison between them is entirely a comparison of spread. The narrowness of the solid curve is the visual content of the claim <math alttext="the variance of beta hat sub 0 is less than or equal to the variance of beta tilde sub 0"><mrow><mi>Var</mi><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>)</mo><mo>≤</mo><mi>Var</mi><mo>(</mo><msub><mover><mi>β</mi><mo>~</mo></mover><mn>0</mn></msub><mo>)</mo></mrow></math>: among all linear unbiased estimators, least squares wastes the least information.</p>
+</details>
+
+<h3>Let's prove these</h3>
+
+<p>We start with the slope. <strong>Show that</strong></p>
+
+<div class="eq">
+<math display="block" alttext="the expected value of beta hat sub 1 equals the expected value of the fraction with numerator the sum over i of the quantity x sub i minus x bar times the quantity y sub i minus y bar, and denominator the sum over i of the quantity x sub i minus x bar squared, and this equals beta sub 1">
+  <mrow>
+    <mi>E</mi><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>)</mo>
+    <mo>=</mo>
+    <mi>E</mi>
+    <mrow>
+      <mo>[</mo>
+      <mfrac>
+        <mrow>
+          <munder><mo>∑</mo><mi>i</mi></munder>
+          <mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow>
+          <mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><mover><mi>y</mi><mo>‾</mo></mover><mo>)</mo></mrow>
+        </mrow>
+        <mrow>
+          <munder><mo>∑</mo><mi>i</mi></munder>
+          <msup><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow><mn>2</mn></msup>
+        </mrow>
+      </mfrac>
+      <mo>]</mo>
+    </mrow>
+    <mo>=</mo>
+    <msub><mi>β</mi><mn>1</mn></msub>
+  </mrow>
+</math>
+</div>
+
+<h2 id="notation">Notation: SSX, SSXY, and a lemma</h2>
+
+<p>Firstly, two named quantities:</p>
+
+<table>
+  <caption>Sum-of-squares notation used throughout the proof</caption>
+  <thead>
+    <tr>
+      <th scope="col">Expression</th>
+      <th scope="col">Name</th>
+      <th scope="col">Read as</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">
+        <math alttext="the sum over i of the quantity x sub i minus x bar, squared">
+          <mrow><munder><mo>∑</mo><mi>i</mi></munder><msup><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow><mn>2</mn></msup></mrow>
+        </math>
+      </th>
+      <td><strong>SSX</strong></td>
+      <td>"sum of squares for <em>X</em>"</td>
+    </tr>
+    <tr>
+      <th scope="row">
+        <math alttext="the sum over i of the quantity x sub i minus x bar times the quantity y sub i minus y bar">
+          <mrow>
+            <munder><mo>∑</mo><mi>i</mi></munder>
+            <mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow>
+            <mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><mover><mi>y</mi><mo>‾</mo></mover><mo>)</mo></mrow>
+          </mrow>
+        </math>
+      </th>
+      <td><strong>SSXY</strong></td>
+      <td>"sum of cross-products of <em>X</em> and <em>Y</em>"</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="note">
+  <p><span class="tag" style="color:var(--est)">Lemma</span></p>
+  <math display="block" alttext="S S X Y equals the sum over i of the quantity x sub i minus x bar times y sub i">
+    <mrow>
+      <mi>SSXY</mi>
+      <mo>=</mo>
+      <munder><mo>∑</mo><mi>i</mi></munder>
+      <mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow>
+      <msub><mi>y</mi><mi>i</mi></msub>
+    </mrow>
+  </math>
+  <p>The <math alttext="y bar"><mover><mi>y</mi><mo>‾</mo></mover></math> can be dropped from the second factor.</p>
+</div>
+
+<h2 id="lemma-proof">Proof of the lemma</h2>
+
+<div class="eq">
+<math display="block" alttext="the sum over i of the quantity x sub i minus x bar times the quantity y sub i minus y bar equals, expanding, the sum over i of x sub i y sub i minus x sub i y bar minus x bar y sub i plus x bar y bar; regrouping, this equals the sum over i of the quantity x sub i minus x bar times y sub i minus the quantity x sub i minus x bar times y bar; and splitting the sum, this equals the sum over i of the quantity x sub i minus x bar times y sub i minus the sum over i of the quantity x sub i minus x bar times y bar">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd>
+        <mrow>
+          <munder><mo>∑</mo><mi>i</mi></munder>
+          <mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow>
+          <mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><mover><mi>y</mi><mo>‾</mo></mover><mo>)</mo></mrow>
+        </mrow>
+      </mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <munder><mo>∑</mo><mi>i</mi></munder>
+          <mrow>
+            <mo>(</mo>
+            <msub><mi>x</mi><mi>i</mi></msub><msub><mi>y</mi><mi>i</mi></msub>
+            <mo>−</mo><msub><mi>x</mi><mi>i</mi></msub><mover><mi>y</mi><mo>‾</mo></mover>
+            <mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><msub><mi>y</mi><mi>i</mi></msub>
+            <mo>+</mo><mover><mi>x</mi><mo>‾</mo></mover><mover><mi>y</mi><mo>‾</mo></mover>
+            <mo>)</mo>
+          </mrow>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <munder><mo>∑</mo><mi>i</mi></munder>
+          <mrow>
+            <mo>(</mo>
+            <mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow><msub><mi>y</mi><mi>i</mi></msub>
+            <mo>−</mo>
+            <mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow><mover><mi>y</mi><mo>‾</mo></mover>
+            <mo>)</mo>
+          </mrow>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <munder><mo>∑</mo><mi>i</mi></munder>
+          <mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow><msub><mi>y</mi><mi>i</mi></msub>
+          <mo>−</mo>
+          <munder><mo>∑</mo><mi>i</mi></munder>
+          <mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow><mover><mi>y</mi><mo>‾</mo></mover>
+        </mrow>
+      </mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<p>The second sum vanishes. Pull <math alttext="y bar"><mover><mi>y</mi><mo>‾</mo></mover></math> out of it and use <math alttext="x bar equals one over n times the sum over i of x sub i"><mrow><mover><mi>x</mi><mo>‾</mo></mover><mo>=</mo><mfrac><mn>1</mn><mi>n</mi></mfrac><munder><mo>∑</mo><mi>i</mi></munder><msub><mi>x</mi><mi>i</mi></msub></mrow></math>:</p>
+
+<div class="eq">
+<math display="block" alttext="y bar times the sum over i of the quantity x sub i minus x bar equals y bar times the quantity n x bar minus n x bar, which equals zero">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd>
+        <mrow>
+          <mover><mi>y</mi><mo>‾</mo></mover>
+          <munder><mo>∑</mo><mi>i</mi></munder>
+          <mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow>
+        </mrow>
+      </mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <mover><mi>y</mi><mo>‾</mo></mover>
+          <mrow><mo>(</mo><mi>n</mi><mover><mi>x</mi><mo>‾</mo></mover><mo>−</mo><mi>n</mi><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><mn>0</mn></mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<p>which proves the lemma. <span class="tag" style="color:var(--pop)">= 0</span> was marked on this term in the original notes.</p>
+
+<h2 id="unbiased-proof">Proving the slope is unbiased</h2>
+
+<p>Back to the proof. Using the lemma, write the slope as a weighted sum of the responses:</p>
+
+<div class="eq">
+<math display="block" alttext="beta hat sub 1 equals S S X Y over S S X, which equals the sum over i of the quantity x sub i minus x bar times y sub i, all over S S X, which equals the sum over i of the quantity x sub i minus x bar over S S X, times y sub i">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><mfrac><mi>SSXY</mi><mi>SSX</mi></mfrac></mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mfrac>
+          <mrow>
+            <munder><mo>∑</mo><mi>i</mi></munder>
+            <mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow>
+            <msub><mi>y</mi><mi>i</mi></msub>
+          </mrow>
+          <mi>SSX</mi>
+        </mfrac>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <munder><mo>∑</mo><mi>i</mi></munder>
+          <mrow>
+            <mo>(</mo>
+            <mfrac>
+              <mrow><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover></mrow>
+              <mi>SSX</mi>
+            </mfrac>
+            <mo>)</mo>
+          </mrow>
+          <msub><mi>y</mi><mi>i</mi></msub>
+        </mrow>
+      </mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<div class="note">
+  <p><span class="tag" style="color:var(--pop)">Key move</span> <strong>Think of <math alttext="S S X"><mi>SSX</mi></math> as a constant.</strong> The predictors are fixed, so the whole weight</p>
+  <math display="block" alttext="k sub i equals the quantity x sub i minus x bar, over S S X">
+    <mrow>
+      <msub><mi>k</mi><mi>i</mi></msub>
+      <mo>=</mo>
+      <mfrac>
+        <mrow><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover></mrow>
+        <mi>SSX</mi>
+      </mfrac>
+    </mrow>
+  </math>
+  <p>is a constant too. That is what lets it pass through <math alttext="E"><mi>E</mi></math> and <math alttext="Var"><mi>Var</mi></math> in everything that follows.</p>
+</div>
+
+<p>So the least squares slope is a <strong>linear combination of the responses</strong>:</p>
+
+<div class="eq">
+<math display="block" alttext="beta hat sub 1 equals the sum over i of k sub i times y sub i">
+  <mrow>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub>
+    <mo>=</mo>
+    <munder><mo>∑</mo><mi>i</mi></munder>
+    <msub><mi>k</mi><mi>i</mi></msub><msub><mi>y</mi><mi>i</mi></msub>
+  </mrow>
+</math>
+</div>
+
+<p>Now take expectations:</p>
+
+<div class="eq">
+<math display="block" alttext="the expected value of beta hat sub 1 equals the expected value of the sum over i of k sub i y sub i, which equals the sum over i of the expected value of k sub i y sub i, which equals the sum over i of k sub i times the expected value of y sub i, which equals the sum over i of k sub i times the expected value of beta sub 0 plus beta sub 1 x sub i plus epsilon sub i, which equals the sum over i of k sub i times the quantity the expected value of beta sub 0 plus the expected value of beta sub 1 x sub i plus the expected value of epsilon sub i, which equals the sum over i of k sub i times the quantity beta sub 0 plus beta sub 1 x sub i plus zero, which equals the sum over i of k sub i beta sub 0 plus the sum over i of beta sub 1 x sub i k sub i, which equals beta sub 0 times the sum over i of k sub i plus beta sub 1 times the sum over i of x sub i k sub i">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd><mrow><mi>E</mi><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>)</mo></mrow></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><mrow><mi>E</mi><mo>(</mo><munder><mo>∑</mo><mi>i</mi></munder><msub><mi>k</mi><mi>i</mi></msub><msub><mi>y</mi><mi>i</mi></msub><mo>)</mo></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><mrow><munder><mo>∑</mo><mi>i</mi></munder><mi>E</mi><mo>(</mo><msub><mi>k</mi><mi>i</mi></msub><msub><mi>y</mi><mi>i</mi></msub><mo>)</mo></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><mrow><munder><mo>∑</mo><mi>i</mi></munder><msub><mi>k</mi><mi>i</mi></msub><mi>E</mi><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>)</mo></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <munder><mo>∑</mo><mi>i</mi></munder><msub><mi>k</mi><mi>i</mi></msub>
+          <mi>E</mi>
+          <mrow><mo>[</mo><msub><mi>β</mi><mn>0</mn></msub><mo>+</mo><msub><mi>β</mi><mn>1</mn></msub><msub><mi>x</mi><mi>i</mi></msub><mo>+</mo><msub><mi>ε</mi><mi>i</mi></msub><mo>]</mo></mrow>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <munder><mo>∑</mo><mi>i</mi></munder><msub><mi>k</mi><mi>i</mi></msub>
+          <mrow>
+            <mo>[</mo>
+            <mi>E</mi><mo>(</mo><msub><mi>β</mi><mn>0</mn></msub><mo>)</mo>
+            <mo>+</mo><mi>E</mi><mo>(</mo><msub><mi>β</mi><mn>1</mn></msub><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo>
+            <mo>+</mo><mi>E</mi><mo>(</mo><msub><mi>ε</mi><mi>i</mi></msub><mo>)</mo>
+            <mo>]</mo>
+          </mrow>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <munder><mo>∑</mo><mi>i</mi></munder><msub><mi>k</mi><mi>i</mi></msub>
+          <mrow><mo>[</mo><msub><mi>β</mi><mn>0</mn></msub><mo>+</mo><msub><mi>β</mi><mn>1</mn></msub><msub><mi>x</mi><mi>i</mi></msub><mo>+</mo><mn>0</mn><mo>]</mo></mrow>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <munder><mo>∑</mo><mi>i</mi></munder><msub><mi>k</mi><mi>i</mi></msub><msub><mi>β</mi><mn>0</mn></msub>
+          <mo>+</mo>
+          <munder><mo>∑</mo><mi>i</mi></munder><msub><mi>β</mi><mn>1</mn></msub><msub><mi>x</mi><mi>i</mi></msub><msub><mi>k</mi><mi>i</mi></msub>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <msub><mi>β</mi><mn>0</mn></msub>
+          <munder><mo>∑</mo><mi>i</mi></munder><msub><mi>k</mi><mi>i</mi></msub>
+          <mo>+</mo>
+          <msub><mi>β</mi><mn>1</mn></msub>
+          <munder><mo>∑</mo><mi>i</mi></munder><msub><mi>x</mi><mi>i</mi></msub><msub><mi>k</mi><mi>i</mi></msub>
+        </mrow>
+      </mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<p>Two facts finish the job.</p>
+
+<h3>The weights sum to zero</h3>
+
+<div class="eq">
+<math display="block" alttext="the sum over i of k sub i equals the sum over i of the quantity x sub i minus x bar over S S X, which equals one over S S X times the sum over i of the quantity x sub i minus x bar, which equals one over S S X times the quantity n x bar minus n x bar, which equals zero">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd><mrow><munder><mo>∑</mo><mi>i</mi></munder><msub><mi>k</mi><mi>i</mi></msub></mrow></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <munder><mo>∑</mo><mi>i</mi></munder>
+          <mfrac><mrow><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover></mrow><mi>SSX</mi></mfrac>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <mfrac><mn>1</mn><mi>SSX</mi></mfrac>
+          <munder><mo>∑</mo><mi>i</mi></munder>
+          <mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <mfrac><mn>1</mn><mi>SSX</mi></mfrac>
+          <mrow><mo>[</mo><mi>n</mi><mover><mi>x</mi><mo>‾</mo></mover><mo>−</mo><mi>n</mi><mover><mi>x</mi><mo>‾</mo></mover><mo>]</mo></mrow>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><mn>0</mn></mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<h3>The weights times the predictors sum to one</h3>
+
+<div class="eq">
+<math display="block" alttext="the sum over i of k sub i x sub i equals the sum over i of the quantity x sub i minus x bar over S S X, times x sub i, which equals one over S S X times the sum over i of the quantity x sub i minus x bar times x sub i">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd><mrow><munder><mo>∑</mo><mi>i</mi></munder><msub><mi>k</mi><mi>i</mi></msub><msub><mi>x</mi><mi>i</mi></msub></mrow></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <munder><mo>∑</mo><mi>i</mi></munder>
+          <mrow><mo>(</mo><mfrac><mrow><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover></mrow><mi>SSX</mi></mfrac><mo>)</mo></mrow>
+          <msub><mi>x</mi><mi>i</mi></msub>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <mfrac><mn>1</mn><mi>SSX</mi></mfrac>
+          <munder><mo>∑</mo><mi>i</mi></munder>
+          <mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow>
+          <msub><mi>x</mi><mi>i</mi></msub>
+        </mrow>
+      </mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<div class="note">
+  <p><span class="tag" style="color:var(--pop)">Use the lemma!</span> Apply the lemma with <math alttext="y"><mi>y</mi></math> replaced by <math alttext="x"><mi>x</mi></math>:</p>
+  <math display="block" alttext="the sum over i of the quantity x sub i minus x bar times x sub i equals the sum over i of the quantity x sub i minus x bar times the quantity x sub i minus x bar, which equals the sum over i of the quantity x sub i minus x bar squared, which equals S S X">
+    <mtable columnalign="right center left">
+      <mtr>
+        <mtd>
+          <mrow>
+            <munder><mo>∑</mo><mi>i</mi></munder>
+            <mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow>
+            <msub><mi>x</mi><mi>i</mi></msub>
+          </mrow>
+        </mtd>
+        <mtd><mo>=</mo></mtd>
+        <mtd>
+          <mrow>
+            <munder><mo>∑</mo><mi>i</mi></munder>
+            <mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow>
+            <mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow>
+          </mrow>
+        </mtd>
+      </mtr>
+      <mtr>
+        <mtd></mtd>
+        <mtd><mo>=</mo></mtd>
+        <mtd>
+          <mrow>
+            <munder><mo>∑</mo><mi>i</mi></munder>
+            <msup><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow><mn>2</mn></msup>
+          </mrow>
+        </mtd>
+      </mtr>
+      <mtr>
+        <mtd></mtd>
+        <mtd><mo>=</mo></mtd>
+        <mtd><mi>SSX</mi></mtd>
+      </mtr>
+    </mtable>
+  </math>
+  <p>Therefore</p>
+  <math display="block" alttext="the sum over i of k sub i x sub i equals one over S S X times S S X, which equals one">
+    <mrow>
+      <munder><mo>∑</mo><mi>i</mi></munder><msub><mi>k</mi><mi>i</mi></msub><msub><mi>x</mi><mi>i</mi></msub>
+      <mo>=</mo>
+      <mfrac><mn>1</mn><mi>SSX</mi></mfrac>
+      <mo>·</mo>
+      <mi>SSX</mi>
+      <mo>=</mo>
+      <mn>1</mn>
+    </mrow>
+  </math>
+</div>
+
+<h3>Putting it together</h3>
+
+<div class="eq">
+<math display="block" alttext="beta sub 0 times the sum over i of k sub i, which is zero, plus beta sub 1 times the sum over i of k sub i x sub i, which is one, equals zero plus beta sub 1, which equals beta sub 1">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd>
+        <mrow>
+          <msub><mi>β</mi><mn>0</mn></msub>
+          <munder><mo>∑</mo><mi>i</mi></munder><msub><mi>k</mi><mi>i</mi></msub>
+          <mo>+</mo>
+          <msub><mi>β</mi><mn>1</mn></msub>
+          <munder><mo>∑</mo><mi>i</mi></munder><msub><mi>k</mi><mi>i</mi></msub><msub><mi>x</mi><mi>i</mi></msub>
+        </mrow>
+      </mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><mrow><mn>0</mn><mo>+</mo><msub><mi>β</mi><mn>1</mn></msub></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><msub><mi>β</mi><mn>1</mn></msub></mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<p>The first sum is <math alttext="zero"><mn>0</mn></math> and the second is <math alttext="one"><mn>1</mn></math>, so <math alttext="the expected value of beta hat sub 1 equals beta sub 1"><mrow><mi>E</mi><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>)</mo><mo>=</mo><msub><mi>β</mi><mn>1</mn></msub></mrow></math>. The slope estimator is unbiased.</p>
+
+<div class="note">
+  <p><span class="tag" style="color:var(--accent)">Exercise</span> <strong>You do <math alttext="beta sub 0"><msub><mi>β</mi><mn>0</mn></msub></math>.</strong> Run the same argument to show <math alttext="the expected value of beta hat sub 0 equals beta sub 0"><mrow><mi>E</mi><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>)</mo><mo>=</mo><msub><mi>β</mi><mn>0</mn></msub></mrow></math>.</p>
+</div>
+
+<h2 id="variance">The variance of the slope estimator</h2>
+
+<p>Now the second property. We want to show</p>
+
+<div class="eq">
+<math display="block" alttext="the variance of beta hat sub 1 is less than or equal to the variance of beta tilde sub 1">
+  <mrow>
+    <mi>Var</mi><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>)</mo>
+    <mo>≤</mo>
+    <mi>Var</mi><mo>(</mo><msub><mover><mi>β</mi><mo>~</mo></mover><mn>1</mn></msub><mo>)</mo>
+  </mrow>
+</math>
+</div>
+
+<p>for some other linear unbiased <math alttext="beta tilde sub 1"><msub><mover><mi>β</mi><mo>~</mo></mover><mn>1</mn></msub></math>. First, the variance of the least squares slope:</p>
+
+<div class="eq">
+<math display="block" alttext="the variance of beta hat sub 1 equals the variance of the sum over i of k sub i y sub i, which equals the sum over i of the variance of k sub i y sub i, which equals the sum over i of k sub i squared times the variance of y sub i, which equals the sum over i of k sub i squared sigma squared, which equals sigma squared times the sum over i of k sub i squared">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd><mrow><mi>Var</mi><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>)</mo></mrow></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><mrow><mi>Var</mi><mo>(</mo><munder><mo>∑</mo><mi>i</mi></munder><msub><mi>k</mi><mi>i</mi></msub><msub><mi>y</mi><mi>i</mi></msub><mo>)</mo></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><mrow><munder><mo>∑</mo><mi>i</mi></munder><mi>Var</mi><mo>(</mo><msub><mi>k</mi><mi>i</mi></msub><msub><mi>y</mi><mi>i</mi></msub><mo>)</mo></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><mrow><munder><mo>∑</mo><mi>i</mi></munder><msubsup><mi>k</mi><mi>i</mi><mn>2</mn></msubsup><mi>Var</mi><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>)</mo></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><mrow><munder><mo>∑</mo><mi>i</mi></munder><msubsup><mi>k</mi><mi>i</mi><mn>2</mn></msubsup><msup><mi>σ</mi><mn>2</mn></msup></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><mrow><msup><mi>σ</mi><mn>2</mn></msup><munder><mo>∑</mo><mi>i</mi></munder><msubsup><mi>k</mi><mi>i</mi><mn>2</mn></msubsup></mrow></mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<div class="note">
+  <p><span class="tag" style="color:var(--est)">Why the variance splits across the sum</span> The step from <math alttext="the variance of a sum"><mrow><mi>Var</mi><mo>(</mo><munder><mo>∑</mo><mi>i</mi></munder><mo>·</mo><mo>)</mo></mrow></math> to a sum of variances assumes the <strong>covariance is <math alttext="zero"><mn>0</mn></math></strong>: the <math alttext="y sub i"><msub><mi>y</mi><mi>i</mi></msub></math>'s are uncorrelated, because the <math alttext="epsilon sub i"><msub><mi>ε</mi><mi>i</mi></msub></math>'s are.</p>
+</div>
+
+<p>The sum of squared weights simplifies:</p>
+
+<div class="eq">
+<math display="block" alttext="the sum over i of k sub i squared equals the sum over i of the quantity x sub i minus x bar over S S X, squared, which equals the sum over i of the quantity x sub i minus x bar squared over S S X squared, which equals one over S S X squared times the sum over i of the quantity x sub i minus x bar squared, which equals one over S S X squared times S S X, which equals one over S S X">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd><mrow><munder><mo>∑</mo><mi>i</mi></munder><msubsup><mi>k</mi><mi>i</mi><mn>2</mn></msubsup></mrow></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <munder><mo>∑</mo><mi>i</mi></munder>
+          <msup><mrow><mo>(</mo><mfrac><mrow><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover></mrow><mi>SSX</mi></mfrac><mo>)</mo></mrow><mn>2</mn></msup>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <munder><mo>∑</mo><mi>i</mi></munder>
+          <mfrac>
+            <msup><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow><mn>2</mn></msup>
+            <msup><mi>SSX</mi><mn>2</mn></msup>
+          </mfrac>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <mfrac><mn>1</mn><msup><mi>SSX</mi><mn>2</mn></msup></mfrac>
+          <munder><mo>∑</mo><mi>i</mi></munder>
+          <msup><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow><mn>2</mn></msup>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><mrow><mfrac><mn>1</mn><msup><mi>SSX</mi><mn>2</mn></msup></mfrac><mi>SSX</mi></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><mfrac><mn>1</mn><mi>SSX</mi></mfrac></mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<p>Which gives the result:</p>
+
+<div class="eq">
+<math display="block" alttext="the variance of beta hat sub 1 equals sigma squared over S S X">
+  <mrow>
+    <mi>Var</mi><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>)</mo>
+    <mo>=</mo>
+    <mfrac><msup><mi>σ</mi><mn>2</mn></msup><mi>SSX</mi></mfrac>
+  </mrow>
+</math>
+</div>
+
+<h2 id="blue-proof">Showing the least squares slope is best</h2>
+
+<p>Can we show <math alttext="the variance of beta tilde sub 1 is greater than or equal to sigma squared over S S X"><mrow><mi>Var</mi><mo>(</mo><msub><mover><mi>β</mi><mo>~</mo></mover><mn>1</mn></msub><mo>)</mo><mo>≥</mo><mfrac><msup><mi>σ</mi><mn>2</mn></msup><mi>SSX</mi></mfrac></mrow></math>?</p>
+
+<p>Write the competing estimator with perturbed weights:</p>
+
+<div class="eq">
+<math display="block" alttext="beta tilde sub 1 equals the sum over i of the quantity k sub i plus d sub i, times y sub i, which equals the sum over i of k tilde sub i y sub i, where k tilde sub i equals k sub i plus d sub i and d sub i is not equal to zero">
+  <mrow>
+    <msub><mover><mi>β</mi><mo>~</mo></mover><mn>1</mn></msub>
+    <mo>=</mo>
+    <munder><mo>∑</mo><mi>i</mi></munder>
+    <mrow><mo>(</mo><msub><mi>k</mi><mi>i</mi></msub><mo>+</mo><msub><mi>d</mi><mi>i</mi></msub><mo>)</mo></mrow>
+    <msub><mi>y</mi><mi>i</mi></msub>
+    <mo>=</mo>
+    <munder><mo>∑</mo><mi>i</mi></munder>
+    <msub><mover><mi>k</mi><mo>~</mo></mover><mi>i</mi></msub>
+    <msub><mi>y</mi><mi>i</mi></msub>
+  </mrow>
+</math>
+</div>
+
+<p>where <math alttext="k tilde sub i equals k sub i plus d sub i"><mrow><msub><mover><mi>k</mi><mo>~</mo></mover><mi>i</mi></msub><mo>=</mo><msub><mi>k</mi><mi>i</mi></msub><mo>+</mo><msub><mi>d</mi><mi>i</mi></msub></mrow></math> and <math alttext="d sub i is not equal to zero"><mrow><msub><mi>d</mi><mi>i</mi></msub><mo>≠</mo><mn>0</mn></mrow></math>.</p>
+
+<div class="note">
+  <p><span class="tag" style="color:var(--err)">What "linear" buys us</span> <math alttext="beta tilde sub 1"><msub><mover><mi>β</mi><mo>~</mo></mover><mn>1</mn></msub></math> is a <strong>linear combination of <math alttext="y"><mi>y</mi></math></strong> — that is the only structure the competitor is allowed to have, and it is enough to pin down its variance.</p>
+</div>
+
+<div class="eq">
+<math display="block" alttext="the variance of beta tilde sub 1 equals the variance of the sum over i of the quantity k sub i plus d sub i times y sub i, which equals the sum over i of the variance of the quantity k sub i plus d sub i times y sub i, which equals the sum over i of the quantity k sub i plus d sub i squared times the variance of y sub i, which equals sigma squared times the sum over i of the quantity k sub i plus d sub i squared, which equals sigma squared times the sum over i of k sub i squared plus two k sub i d sub i plus d sub i squared">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd><mrow><mi>Var</mi><mo>(</mo><msub><mover><mi>β</mi><mo>~</mo></mover><mn>1</mn></msub><mo>)</mo></mrow></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <mi>Var</mi>
+          <mrow><mo>(</mo><munder><mo>∑</mo><mi>i</mi></munder><mrow><mo>(</mo><msub><mi>k</mi><mi>i</mi></msub><mo>+</mo><msub><mi>d</mi><mi>i</mi></msub><mo>)</mo></mrow><msub><mi>y</mi><mi>i</mi></msub><mo>)</mo></mrow>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <munder><mo>∑</mo><mi>i</mi></munder>
+          <mi>Var</mi>
+          <mrow><mo>[</mo><mrow><mo>(</mo><msub><mi>k</mi><mi>i</mi></msub><mo>+</mo><msub><mi>d</mi><mi>i</mi></msub><mo>)</mo></mrow><msub><mi>y</mi><mi>i</mi></msub><mo>]</mo></mrow>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <munder><mo>∑</mo><mi>i</mi></munder>
+          <msup><mrow><mo>(</mo><msub><mi>k</mi><mi>i</mi></msub><mo>+</mo><msub><mi>d</mi><mi>i</mi></msub><mo>)</mo></mrow><mn>2</mn></msup>
+          <mi>Var</mi><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>)</mo>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <msup><mi>σ</mi><mn>2</mn></msup>
+          <munder><mo>∑</mo><mi>i</mi></munder>
+          <msup><mrow><mo>(</mo><msub><mi>k</mi><mi>i</mi></msub><mo>+</mo><msub><mi>d</mi><mi>i</mi></msub><mo>)</mo></mrow><mn>2</mn></msup>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <msup><mi>σ</mi><mn>2</mn></msup>
+          <munder><mo>∑</mo><mi>i</mi></munder>
+          <mrow><mo>(</mo><msubsup><mi>k</mi><mi>i</mi><mn>2</mn></msubsup><mo>+</mo><mn>2</mn><msub><mi>k</mi><mi>i</mi></msub><msub><mi>d</mi><mi>i</mi></msub><mo>+</mo><msubsup><mi>d</mi><mi>i</mi><mn>2</mn></msubsup><mo>)</mo></mrow>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <msup><mi>σ</mi><mn>2</mn></msup>
+          <mrow>
+            <mo>(</mo>
+            <munder><mo>∑</mo><mi>i</mi></munder><msubsup><mi>k</mi><mi>i</mi><mn>2</mn></msubsup>
+            <mo>+</mo>
+            <mn>2</mn><munder><mo>∑</mo><mi>i</mi></munder><msub><mi>k</mi><mi>i</mi></msub><msub><mi>d</mi><mi>i</mi></msub>
+            <mo>+</mo>
+            <munder><mo>∑</mo><mi>i</mi></munder><msubsup><mi>d</mi><mi>i</mi><mn>2</mn></msubsup>
+            <mo>)</mo>
+          </mrow>
+        </mrow>
+      </mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<p>The two extra terms are together <math alttext="greater than or equal to zero"><mrow><mo>≥</mo><mn>0</mn></mrow></math>, because:</p>
+
+<table>
+  <caption>The two cross terms, and why neither can reduce the variance</caption>
+  <thead>
+    <tr><th scope="col">Term</th><th scope="col">Value</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">
+        <math alttext="the sum over i of d sub i squared">
+          <mrow><munder><mo>∑</mo><mi>i</mi></munder><msubsup><mi>d</mi><mi>i</mi><mn>2</mn></msubsup></mrow>
+        </math>
+      </th>
+      <td>
+        <math alttext="greater than zero"><mrow><mo>&gt;</mo><mn>0</mn></mrow></math>
+        — a sum of squares, and the <math alttext="d sub i"><msub><mi>d</mi><mi>i</mi></msub></math>'s are not all zero
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">
+        <math alttext="two times the sum over i of k sub i d sub i">
+          <mrow><mn>2</mn><munder><mo>∑</mo><mi>i</mi></munder><msub><mi>k</mi><mi>i</mi></msub><msub><mi>d</mi><mi>i</mi></msub></mrow>
+        </math>
+      </th>
+      <td><math alttext="equals zero"><mrow><mo>=</mo><mn>0</mn></mrow></math></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Therefore</p>
+
+<div class="eq">
+<math display="block" alttext="sigma squared times the quantity the sum of k sub i squared plus two times the sum of k sub i d sub i plus the sum of d sub i squared, is greater than sigma squared times the sum of k sub i squared">
+  <mrow>
+    <msup><mi>σ</mi><mn>2</mn></msup>
+    <mrow>
+      <mo>(</mo>
+      <munder><mo>∑</mo><mi>i</mi></munder><msubsup><mi>k</mi><mi>i</mi><mn>2</mn></msubsup>
+      <mo>+</mo>
+      <mn>2</mn><munder><mo>∑</mo><mi>i</mi></munder><msub><mi>k</mi><mi>i</mi></msub><msub><mi>d</mi><mi>i</mi></msub>
+      <mo>+</mo>
+      <munder><mo>∑</mo><mi>i</mi></munder><msubsup><mi>d</mi><mi>i</mi><mn>2</mn></msubsup>
+      <mo>)</mo>
+    </mrow>
+    <mo>&gt;</mo>
+    <msup><mi>σ</mi><mn>2</mn></msup>
+    <munder><mo>∑</mo><mi>i</mi></munder><msubsup><mi>k</mi><mi>i</mi><mn>2</mn></msubsup>
+  </mrow>
+</math>
+</div>
+
+<p>The right-hand side is exactly <math alttext="the variance of beta hat sub 1"><mrow><mi>Var</mi><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>)</mo></mrow></math>, so any other linear unbiased estimator has strictly larger variance. Least squares is best.</p>
+
+<h2 id="summary">III. Summarize</h2>
+
+<table>
+  <caption>What we have established for the least squares slope</caption>
+  <thead>
+    <tr><th scope="col">Quantity</th><th scope="col">Result</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row"><math alttext="the expected value of beta hat sub 1"><mrow><mi>E</mi><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>)</mo></mrow></math></th>
+      <td><math alttext="beta sub 1"><msub><mi>β</mi><mn>1</mn></msub></math></td>
+    </tr>
+    <tr>
+      <th scope="row"><math alttext="the variance of beta hat sub 1"><mrow><mi>Var</mi><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>)</mo></mrow></math></th>
+      <td><math alttext="sigma squared over S S X"><mfrac><msup><mi>σ</mi><mn>2</mn></msup><mi>SSX</mi></mfrac></math></td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="note">
+  <p><span class="tag" style="color:var(--pop)">What about the intercept?</span></p>
+  <p>Can we show <math alttext="the expected value of beta hat sub 0 equals beta sub 0"><mrow><mi>E</mi><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>)</mo><mo>=</mo><msub><mi>β</mi><mn>0</mn></msub></mrow></math>? And <math alttext="the variance of beta hat sub 0 is less than or equal to the variance of beta tilde sub 0"><mrow><mi>Var</mi><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>)</mo><mo>≤</mo><mi>Var</mi><mo>(</mo><msub><mover><mi>β</mi><mo>~</mo></mover><mn>0</mn></msub><mo>)</mo></mrow></math>? The variance turns out to be</p>
+  <math display="block" alttext="the variance of beta hat sub 0 equals sigma squared times the quantity one over n plus x bar squared over S S X">
+    <mrow>
+      <mi>Var</mi><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>)</mo>
+      <mo>=</mo>
+      <msup><mi>σ</mi><mn>2</mn></msup>
+      <mrow>
+        <mo>(</mo>
+        <mfrac><mn>1</mn><mi>n</mi></mfrac>
+        <mo>+</mo>
+        <mfrac><msup><mover><mi>x</mi><mo>‾</mo></mover><mn>2</mn></msup><mi>SSX</mi></mfrac>
+        <mo>)</mo>
+      </mrow>
+    </mrow>
+  </math>
+</div>
+
+<h2 id="sampling">IV. Sampling distributions of the estimators</h2>
+
+<p>If we assume</p>
+
+<div class="eq">
+<math display="block" alttext="epsilon sub i is distributed normal with mean zero and variance sigma squared">
+  <mrow>
+    <msub><mi>ε</mi><mi>i</mi></msub>
+    <mo>∼</mo>
+    <mi>N</mi>
+    <mrow><mo>(</mo><mn>0</mn><mo>,</mo><msup><mi>σ</mi><mn>2</mn></msup><mo>)</mo></mrow>
+  </mrow>
+</math>
+</div>
+
+<p>then the estimators are normally distributed as well:</p>
+
+<div class="eq">
+<math display="block" alttext="beta hat sub 1 is distributed normal with mean beta sub 1 and variance sigma squared over S S X">
+  <mrow>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub>
+    <mo>∼</mo>
+    <mi>N</mi>
+    <mrow>
+      <mo>(</mo>
+      <msub><mi>β</mi><mn>1</mn></msub>
+      <mo>,</mo>
+      <mfrac><msup><mi>σ</mi><mn>2</mn></msup><mi>SSX</mi></mfrac>
+      <mo>)</mo>
+    </mrow>
+  </mrow>
+</math>
+</div>
+
+<div class="eq">
+<math display="block" alttext="beta hat sub 0 is distributed normal with mean beta sub 0 and variance sigma squared times the quantity one over n plus x bar squared over S S X">
+  <mrow>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub>
+    <mo>∼</mo>
+    <mi>N</mi>
+    <mrow>
+      <mo>(</mo>
+      <msub><mi>β</mi><mn>0</mn></msub>
+      <mo>,</mo>
+      <msup><mi>σ</mi><mn>2</mn></msup>
+      <mrow>
+        <mo>(</mo>
+        <mfrac><mn>1</mn><mi>n</mi></mfrac>
+        <mo>+</mo>
+        <mfrac><msup><mover><mi>x</mi><mo>‾</mo></mover><mn>2</mn></msup><mi>SSX</mi></mfrac>
+        <mo>)</mo>
+      </mrow>
+      <mo>)</mo>
+    </mrow>
+  </mrow>
+</math>
+</div>
+
+<div class="note">
+  <p><strong>Why this matters.</strong> Unbiasedness and the variance formulas hold without any normality assumption — that is the content of Gauss–Markov. Adding <math alttext="epsilon sub i is distributed normal with mean zero and variance sigma squared"><mrow><msub><mi>ε</mi><mi>i</mi></msub><mo>∼</mo><mi>N</mi><mo>(</mo><mn>0</mn><mo>,</mo><msup><mi>σ</mi><mn>2</mn></msup><mo>)</mo></mrow></math> upgrades them to full <em>distributions</em>, which is what confidence intervals and hypothesis tests are built on.</p>
+</div>
+
+</main>
+
+<footer>
+  <p>Transcribed from the handwritten notes <em>LR_week_2_day_1.pdf</em> (9 pages). Equations are MathML; figures are inline SVG with title, description, and an expandable long description. Figure numbering continues from Week 1, Day 1. Conforms to WCAG 2.2 Level AA.</p>
+</footer>
+</div>
+</body>
+</html>
