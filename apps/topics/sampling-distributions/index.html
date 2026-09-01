@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sampling Distributions of β₀ and β₁ — DSAI 601</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      max-width: 980px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+      color: #222;
+    }
+    a.back { font-size: 0.9rem; color: #1a5fb4; text-decoration: none; }
+    h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+    h2 { font-size: 1.1rem; margin: 1.5rem 0 0.25rem; }
+    p.instructions { color: #555; font-size: 0.95rem; margin-top: 0; }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1.25rem;
+      margin: 0.75rem 0 1.25rem;
+      padding: 0.75rem 1rem;
+      background: #f7f7f8;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    .controls label { display: flex; align-items: center; gap: 0.5rem; }
+    .controls input[type="range"] { width: 160px; }
+    .controls button, .controls select {
+      padding: 0.4rem 0.6rem;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    #progress-line { font-size: 0.95rem; margin: 0 0 0.75rem; }
+    #progress-line .stat-value { font-weight: 600; }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 0.5rem;
+    }
+    .row.single { grid-template-columns: 1fr; }
+    .panel-cell { border: 1px solid #ddd; border-radius: 4px; padding: 0.5rem 0.5rem 0.25rem; }
+    .panel-cell h3 { font-size: 0.95rem; margin: 0 0 0.25rem 0.25rem; color: #333; }
+    .panel-note { font-size: 0.85rem; color: #555; margin: 0.25rem 0.25rem 0.5rem; }
+    .panel-note .stat-value { font-weight: 600; }
+
+    #ci-panel-wrap {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 0.5rem 0.5rem 0.25rem;
+      margin-bottom: 1rem;
+    }
+    #ci-placeholder {
+      color: #777;
+      font-size: 0.9rem;
+      padding: 2rem 1rem;
+      text-align: center;
+    }
+
+    #stats { font-size: 0.95rem; margin: 0 0 1.25rem; }
+    #stats .stat { margin-right: 0.5rem; }
+    #stats .stat:not(:last-child)::after { content: " | "; color: #999; font-weight: 400; }
+    #stats .stat-value { font-weight: 600; }
+
+    .point { fill: #1a5fb4; }
+    .fit-line { stroke: #c01c28; stroke-width: 2; }
+    .hist-bar { fill: #1a5fb4; opacity: 0.75; }
+    .theory-curve { stroke: #c01c28; stroke-width: 2; fill: none; }
+    .true-ref-line { stroke: #333; stroke-dasharray: 2 2; }
+    .axis-label { font-size: 0.75rem; fill: #555; }
+
+    .ci-line.covered { stroke: #1a5fb4; }
+    .ci-line.missed { stroke: #c01c28; stroke-dasharray: 3 2; }
+    .ci-line { cursor: pointer; }
+    .ci-line.inspected { stroke-width: 4; }
+    .ci-dot { fill: #222; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <a class="back" href="../../">&larr; All topics</a>
+  <h1>Sampling Distributions of β₀ and β₁</h1>
+  <p class="instructions">
+    For a fixed set of x-values, samples of y are drawn one at a time from the true model
+    y = β₀ + β₁x + ε, ε ~ N(0, σ²), shown against the gray dashed true line. Each sample's OLS
+    fit (red) contributes one value to the accumulating β̂₀ and β̂₁ histograms below, which are
+    compared against the theoretical sampling distribution (also in red). Once all 1000 samples
+    have been drawn, a confidence interval panel appears beneath the histograms.
+  </p>
+
+  <div class="controls">
+    <label>n = <span id="n-readout">20</span>
+      <input type="range" id="n-slider" min="5" max="100" step="1" value="20">
+    </label>
+    <label>true σ = <span id="sigma-readout">2.0</span>
+      <input type="range" id="sigma-slider" min="0.5" max="5" step="0.1" value="2">
+    </label>
+    <label>confidence level
+      <select id="confidence-level">
+        <option value="0.90">90%</option>
+        <option value="0.95" selected>95%</option>
+        <option value="0.99">99%</option>
+      </select>
+    </label>
+    <button id="new-design" title="Draws a different fixed set of n x-values (changing x̄ and the spread of x) and restarts the animation." aria-describedby="reset-note">New x-values</button>
+  </div>
+
+  <p id="reset-note" class="instructions">
+    The x-values are held fixed throughout — only y is resampled each time, matching the classical
+    assumption behind these formulas. "Restart" replays the animation with the <em>same</em>
+    x-values; "New x-values" draws a <em>different</em> fixed set of x-values (changing x̄ and the
+    spread of x) and also restarts.
+  </p>
+
+  <div class="controls">
+    <button id="play-pause">Play</button>
+    <button id="step">Step</button>
+    <label>speed
+      <input type="range" id="speed-slider" min="1" max="30" step="1" value="5">
+    </label>
+    <button id="skip-to-end">Skip to end</button>
+    <button id="restart" title="Replays the animation from sample 1 using the same fixed x-values." aria-describedby="reset-note">Restart</button>
+  </div>
+
+  <p id="progress-line" aria-live="polite" aria-atomic="true">
+    True model: y = <span class="stat-value" id="true-b0">2.00</span> +
+    <span class="stat-value" id="true-b1">1.30</span>x + ε, σ =
+    <span class="stat-value" id="true-sigma">2.0</span>
+    &nbsp;|&nbsp; sample <span class="stat-value" id="rep-index">0</span> of <span class="stat-value" id="rep-total">1000</span>
+  </p>
+
+  <div class="row single">
+    <div class="panel-cell">
+      <h3>Current sample and fitted line</h3>
+      <div id="current-sample-panel"></div>
+      <p class="panel-note">
+        This sample: β̂₀ = <span class="stat-value" id="cur-est-b0">–</span>,
+        β̂₁ = <span class="stat-value" id="cur-est-b1">–</span>
+      </p>
+      <p id="inspect-note" class="panel-note" aria-live="polite"></p>
+    </div>
+  </div>
+
+  <h2>Accumulated sampling distributions</h2>
+  <div class="row">
+    <div class="panel-cell">
+      <h3>β̂₀</h3>
+      <div id="b0-hist-panel"></div>
+    </div>
+    <div class="panel-cell">
+      <h3>β̂₁</h3>
+      <div id="b1-hist-panel"></div>
+    </div>
+  </div>
+
+  <h2>Confidence intervals: samples 1–100 of 1000</h2>
+  <p class="instructions">
+    Plotting all 1000 intervals would be unreadably dense, so only samples 1–100 (in the order they
+    were drawn) are shown below — since every sample is drawn independently the same way, this is
+    just as representative as any other 100 would be. The coverage rate underneath, however, is
+    computed across <strong>all 1000</strong> samples, not just the 100 plotted, for a more precise estimate.
+  </p>
+  <div class="controls">
+    <label><input type="radio" name="ci-coef" value="b0" checked> Show β₀ intervals</label>
+    <label><input type="radio" name="ci-coef" value="b1"> Show β₁ intervals</label>
+    <button id="show-missed" disabled>Show a missed example</button>
+    <button id="show-latest" disabled>Show latest sample</button>
+  </div>
+  <p class="instructions">
+    Click any interval below, or use "Show a missed example," to load that specific sample's data
+    and fitted line into the "Current sample" panel above — a concrete look at what an unlucky
+    sample actually looks like.
+  </p>
+  <div id="ci-panel-wrap">
+    <div id="ci-placeholder">Confidence intervals will appear here once all 1000 samples have been drawn — use "Skip to end" to jump ahead.</div>
+    <div id="ci-content" hidden>
+      <div id="ci-panel"></div>
+      <p id="coverage-line" class="panel-note">
+        coverage across all samples = <span class="stat-value" id="coverage-rate">–</span>,
+        nominal target = <span class="stat-value" id="coverage-target">–</span>
+      </p>
+    </div>
+  </div>
+
+  <div id="stats" aria-live="polite" aria-atomic="true">
+    <span class="stat">mean β̂₀ = <span id="mean-b0" class="stat-value">–</span></span>
+    <span class="stat">theoretical = <span id="theory-mean-b0" class="stat-value">–</span></span>
+    <span class="stat">SD β̂₀ = <span id="sd-b0" class="stat-value">–</span></span>
+    <span class="stat">theoretical = <span id="theory-sd-b0" class="stat-value">–</span></span>
+    <br>
+    <span class="stat">mean β̂₁ = <span id="mean-b1" class="stat-value">–</span></span>
+    <span class="stat">theoretical = <span id="theory-mean-b1" class="stat-value">–</span></span>
+    <span class="stat">SD β̂₁ = <span id="sd-b1" class="stat-value">–</span></span>
+    <span class="stat">theoretical = <span id="theory-sd-b1" class="stat-value">–</span></span>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
