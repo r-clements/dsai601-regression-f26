@@ -1,0 +1,1507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sampling Distributions, Residuals, and Inference for SLR — Week 2, Day 2 | DSAI 601</title>
+<meta name="description" content="Accessible class notes on the sampling distribution of fitted values, residuals versus errors, properties of least squares residuals, the MSE estimator for the error variance, and t-based hypothesis tests and confidence intervals for the regression coefficients.">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --muted: #4a4a4a;
+    --rule: #c9c9c9;
+    --accent: #0b4f8a;
+    --accent-bg: #eef4fa;
+    --focus: #0b4f8a;
+    --pop: #a4262c;   /* population / true  — 5.9:1 on white */
+    --est: #5b2d8e;   /* estimate / fitted  — 8.5:1 on white */
+    --err: #8a5000;   /* errors / residuals — 5.1:1 on white */
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #f2f2f2; --muted: #cfcfcf; --rule: #555;
+      --accent: #8ab8e0; --accent-bg: #182430; --focus: #8ab8e0;
+      --pop: #ff9f99; --est: #cbb0ff; --err: #f0b458;
+    }
+    body { background: #131313; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 1.0625rem;
+    line-height: 1.65;
+    color: var(--ink);
+    background: #fff;
+  }
+  @media (prefers-color-scheme: dark) { body { background: #131313; } }
+  .wrap { max-width: 46rem; margin: 0 auto; padding: 1.5rem 1.25rem 5rem; }
+  a { color: var(--accent); }
+  a:focus-visible, summary:focus-visible, :focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+  .skip {
+    position: absolute; left: -9999px; top: 0;
+    background: var(--accent); color: #fff;
+    padding: .75rem 1rem; z-index: 10; text-decoration: none;
+  }
+  .skip:focus { left: .5rem; top: .5rem; }
+  h1 { font-size: 1.85rem; line-height: 1.25; margin: 0 0 .25rem; }
+  h2 { font-size: 1.35rem; line-height: 1.3; margin: 2.5rem 0 .5rem;
+       padding-top: .75rem; border-top: 2px solid var(--rule); }
+  h3 { font-size: 1.1rem; margin: 1.75rem 0 .4rem; }
+  p, li { max-width: 42rem; }
+  .lede { color: var(--muted); margin-top: 0; }
+  nav.toc {
+    background: var(--accent-bg); border: 1px solid var(--rule);
+    border-radius: 8px; padding: 1rem 1.25rem; margin: 2rem 0;
+  }
+  nav.toc h2 { font-size: 1.05rem; margin: 0 0 .5rem; border: 0; padding: 0; }
+  nav.toc ol { margin: 0; padding-left: 1.25rem; }
+  nav.toc li { margin: .3rem 0; }
+  nav.toc a { display: inline-block; min-height: 24px; padding: 2px 0; }
+  table { border-collapse: collapse; margin: 1rem 0; width: 100%; }
+  caption { text-align: left; font-weight: 600; padding-bottom: .5rem; }
+  th, td { border: 1px solid var(--rule); padding: .5rem .7rem; text-align: left; }
+  thead th { background: var(--accent-bg); }
+  figure { margin: 1.5rem 0; }
+  figcaption { font-size: .95rem; color: var(--muted); margin-top: .5rem; }
+  svg { max-width: 100%; height: auto; display: block; }
+  details {
+    border: 1px solid var(--rule); border-radius: 6px;
+    padding: .5rem .85rem; margin: .75rem 0; background: var(--accent-bg);
+  }
+  summary { cursor: pointer; font-weight: 600; min-height: 24px; padding: .25rem 0; }
+  details[open] summary { margin-bottom: .5rem; }
+  math { font-size: 1.15em; }
+  math[display="block"] { margin: 1rem 0; overflow-x: auto; overflow-y: hidden; }
+  .eq { margin: 1.25rem 0; }
+  .note {
+    border-left: 4px solid var(--accent); background: var(--accent-bg);
+    padding: .75rem 1rem; margin: 1.25rem 0; border-radius: 0 6px 6px 0;
+  }
+  .note > :first-child { margin-top: 0; }
+  .note > :last-child { margin-bottom: 0; }
+  .tag {
+    display: inline-block; font-size: .8rem; font-weight: 700;
+    letter-spacing: .02em; text-transform: uppercase;
+    border: 1px solid currentColor; border-radius: 4px;
+    padding: 0 .4em; white-space: nowrap;
+  }
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 2px solid var(--rule);
+           color: var(--muted); font-size: .95rem; }
+  ol.steps { padding-left: 1.4rem; }
+  ol.steps > li { margin: .75rem 0; }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+
+<div class="wrap">
+<header>
+  <p class="lede"><strong>DSAI 601 — Regression</strong> · Fall 2026 · Week 2, Day 2</p>
+  <h1>Sampling Distributions, Residuals, and Inference for SLR</h1>
+  <p class="lede">Accessible transcription of the handwritten class notes. All equations are marked up in MathML so they can be read by a screen reader, magnified, or rendered in braille. All figures have text descriptions. Annotations written in a second pen colour in the original are reproduced here as labelled callouts, so none of their meaning depends on colour.</p>
+</header>
+
+<nav class="toc" aria-labelledby="toc-h">
+  <h2 id="toc-h">On this page</h2>
+  <ol>
+    <li><a href="#sampling">I. Sampling distributions</a></li>
+    <li><a href="#fitted">Distribution of the fitted values</a></li>
+    <li><a href="#residuals">II. Residuals</a></li>
+    <li><a href="#eps-vs-e">Difference between the errors and the residuals</a></li>
+    <li><a href="#props">III. Properties of the fitted values and residuals</a></li>
+    <li><a href="#sigma">IV. An estimator for the error variance</a></li>
+    <li><a href="#testing">V. Hypothesis testing for SLR</a></li>
+    <li><a href="#intercept-test">Testing the intercept</a></li>
+    <li><a href="#ci">Confidence intervals</a></li>
+    <li><a href="#why">Why the interval works</a></li>
+  </ol>
+</nav>
+
+<main id="main">
+
+<h2 id="sampling">I. Sampling distributions</h2>
+
+<p>Start from the model:</p>
+
+<div class="eq">
+<math display="block" alttext="y sub i equals beta sub 0 plus beta sub 1 x sub i plus epsilon sub i, for i equals 1 through n">
+  <mrow>
+    <msub><mi>y</mi><mi>i</mi></msub><mo>=</mo>
+    <msub><mi>β</mi><mn>0</mn></msub><mo>+</mo>
+    <msub><mi>β</mi><mn>1</mn></msub><msub><mi>x</mi><mi>i</mi></msub><mo>+</mo>
+    <msub><mi>ε</mi><mi>i</mi></msub>
+    <mo lspace="1em">,</mo><mspace width="0.5em"></mspace>
+    <mi>i</mi><mo>=</mo><mn>1</mn><mo>,</mo><mo>…</mo><mo>,</mo><mi>n</mi>
+  </mrow>
+</math>
+</div>
+
+<p>Under the classical SLR assumptions:</p>
+
+<div class="eq">
+<math display="block" alttext="y sub i is distributed normal with mean beta sub 0 plus beta sub 1 x sub i and variance sigma squared">
+  <mrow>
+    <msub><mi>y</mi><mi>i</mi></msub><mo>∼</mo><mi>N</mi>
+    <mrow><mo>(</mo>
+      <msub><mi>β</mi><mn>0</mn></msub><mo>+</mo><msub><mi>β</mi><mn>1</mn></msub><msub><mi>x</mi><mi>i</mi></msub>
+      <mo>,</mo><msup><mi>σ</mi><mn>2</mn></msup>
+    <mo>)</mo></mrow>
+  </mrow>
+</math>
+</div>
+
+<div class="eq">
+<math display="block" alttext="beta hat sub 0 is distributed normal with mean beta sub 0 and variance sigma squared times the quantity one over n plus x bar squared over S S X">
+  <mrow>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>∼</mo><mi>N</mi>
+    <mrow><mo>(</mo>
+      <msub><mi>β</mi><mn>0</mn></msub><mo>,</mo>
+      <msup><mi>σ</mi><mn>2</mn></msup>
+      <mrow><mo>(</mo>
+        <mfrac><mn>1</mn><mi>n</mi></mfrac><mo>+</mo>
+        <mfrac><msup><mover><mi>x</mi><mo>‾</mo></mover><mn>2</mn></msup><mi>SSX</mi></mfrac>
+      <mo>)</mo></mrow>
+    <mo>)</mo></mrow>
+  </mrow>
+</math>
+</div>
+
+<div class="eq">
+<math display="block" alttext="beta hat sub 1 is distributed normal with mean beta sub 1 and variance sigma squared over S S X">
+  <mrow>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>∼</mo><mi>N</mi>
+    <mrow><mo>(</mo>
+      <msub><mi>β</mi><mn>1</mn></msub><mo>,</mo>
+      <mfrac><msup><mi>σ</mi><mn>2</mn></msup><mi>SSX</mi></mfrac>
+    <mo>)</mo></mrow>
+  </mrow>
+</math>
+</div>
+
+<p>where</p>
+
+<div class="eq">
+<math display="block" alttext="S S X equals the sum over i of the quantity x sub i minus x bar, squared">
+  <mrow>
+    <mi>SSX</mi><mo>=</mo>
+    <munder><mo>∑</mo><mi>i</mi></munder>
+    <msup><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow><mn>2</mn></msup>
+  </mrow>
+</math>
+</div>
+
+<figure>
+<svg viewBox="0 0 560 320" role="img" aria-labelledby="fig7-t fig7-d" xmlns="http://www.w3.org/2000/svg">
+  <title id="fig7-t">Scatterplot with the population regression line and the error distribution at one value of x</title>
+  <desc id="fig7-d">Data points scatter around a straight line rising from lower left to upper right, labelled y equals beta zero plus beta one x. At one particular x value a dashed vertical line runs up to the line, and a sideways bell-shaped curve is drawn there, centred on the line, showing how the response varies around the line at that x.</desc>
+  <line x1="60" y1="270" x2="510" y2="270" stroke="currentColor" stroke-width="2"/>
+  <line x1="60" y1="270" x2="60" y2="30" stroke="currentColor" stroke-width="2"/>
+  <polygon points="510,270 502,266 502,274" fill="currentColor"/>
+  <polygon points="60,30 56,38 64,38" fill="currentColor"/>
+  <text x="515" y="275" font-size="15" fill="currentColor">x</text>
+  <text x="42" y="28" font-size="15" fill="currentColor">y</text>
+  <line x1="90" y1="230" x2="470" y2="60" stroke="var(--pop)" stroke-width="3"/>
+  <polygon points="470,60 461,61 465,69" fill="var(--pop)"/>
+  <text x="360" y="48" font-size="14" fill="var(--pop)">y = β₀ + β₁x</text>
+  <!-- observations: straddle the line, alternating above and below it -->
+  <g fill="currentColor">
+    <circle cx="110" cy="238" r="3.5"/><circle cx="140" cy="194" r="3.5"/>
+    <circle cx="170" cy="205" r="3.5"/><circle cx="200" cy="163" r="3.5"/>
+    <circle cx="230" cy="182" r="3.5"/><circle cx="260" cy="144" r="3.5"/>
+    <circle cx="290" cy="159" r="3.5"/><circle cx="320" cy="111" r="3.5"/>
+    <circle cx="350" cy="126" r="3.5"/><circle cx="380" cy="87" r="3.5"/>
+    <circle cx="410" cy="103" r="3.5"/><circle cx="440" cy="58" r="3.5"/>
+  </g>
+  <!-- conditional distribution of y at one x, drawn on its side -->
+  <line x1="320" y1="250" x2="320" y2="127" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <line x1="320" y1="69" x2="320" y2="185" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+  <path d="M320.4,69 C 320.9,75.4 321.8,81.9 326.8,88 C 331.8,94.8 342.5,101.2 355.7,108 C 368.8,114.1 382.0,120.6 382.0,127 C 382.0,133.4 368.8,139.9 355.7,146 C 342.5,152.8 331.8,159.2 326.8,166 C 321.8,172.1 320.9,178.6 320.4,185"
+        fill="none" stroke="var(--err)" stroke-width="3"/>
+  <circle cx="320" cy="127" r="4" fill="var(--pop)"/>
+</svg>
+<figcaption>Figure 7. At each <em>x</em>, the response is centred on the population line and varies around it with the same error distribution.</figcaption>
+</figure>
+<details>
+  <summary>Long description of Figure 7</summary>
+  <p>The horizontal axis is the predictor <em>x</em> and the vertical axis the response <em>y</em>. Fourteen data points scatter upward from lower left to upper right. A straight line through the cloud, labelled <math alttext="y equals beta sub 0 plus beta sub 1 x"><mrow><mi>y</mi><mo>=</mo><msub><mi>β</mi><mn>0</mn></msub><mo>+</mo><msub><mi>β</mi><mn>1</mn></msub><mi>x</mi></mrow></math>, is the unknown population line. At one chosen <em>x</em>, a dashed vertical line rises from the axis to the point where it meets the line, and a bell-shaped curve is drawn on its side there, symmetric about the line. The picture is the statement <math alttext="y sub i is distributed normal with mean beta sub 0 plus beta sub 1 x sub i and variance sigma squared"><mrow><msub><mi>y</mi><mi>i</mi></msub><mo>∼</mo><mi>N</mi><mo>(</mo><msub><mi>β</mi><mn>0</mn></msub><mo>+</mo><msub><mi>β</mi><mn>1</mn></msub><msub><mi>x</mi><mi>i</mi></msub><mo>,</mo><msup><mi>σ</mi><mn>2</mn></msup><mo>)</mo></mrow></math>: the mean slides along the line as <em>x</em> changes, but the spread does not.</p>
+</details>
+
+<figure>
+<svg viewBox="0 0 560 320" role="img" aria-labelledby="fig8-t fig8-d" xmlns="http://www.w3.org/2000/svg">
+  <title id="fig8-t">Many estimated regression lines from repeated samples, fanning around the population line</title>
+  <desc id="fig8-d">One thick solid line is the population regression line. Seven thinner lines, each estimated from a different sample, cross it at different angles. They agree most closely near the mean of x, marked with a tick labelled x bar, and fan apart towards both ends of the x range.</desc>
+  <line x1="60" y1="270" x2="510" y2="270" stroke="currentColor" stroke-width="2"/>
+  <line x1="60" y1="270" x2="60" y2="30" stroke="currentColor" stroke-width="2"/>
+  <polygon points="510,270 502,266 502,274" fill="currentColor"/>
+  <polygon points="60,30 56,38 64,38" fill="currentColor"/>
+  <text x="515" y="275" font-size="15" fill="currentColor">x</text>
+  <text x="42" y="28" font-size="15" fill="currentColor">y</text>
+  <g stroke="var(--est)" stroke-width="2" fill="none" opacity="0.85">
+    <line x1="100" y1="236" x2="460" y2="86"/>
+    <line x1="100" y1="252" x2="460" y2="72"/>
+    <line x1="100" y1="220" x2="460" y2="102"/>
+    <line x1="100" y1="246" x2="460" y2="78"/>
+    <line x1="100" y1="228" x2="460" y2="96"/>
+    <line x1="100" y1="258" x2="460" y2="64"/>
+    <line x1="100" y1="214" x2="460" y2="110"/>
+  </g>
+  <line x1="90" y1="250" x2="470" y2="70" stroke="var(--pop)" stroke-width="4"/>
+  <polygon points="470,70 461,71 465,79" fill="var(--pop)"/>
+  <text x="352" y="56" font-size="14" fill="var(--pop)">population line</text>
+  <line x1="280" y1="263" x2="280" y2="277" stroke="currentColor" stroke-width="2"/>
+  <text x="280" y="296" font-size="16" fill="currentColor" text-anchor="middle">x̄</text>
+</svg>
+<figcaption>Figure 8. Each sample gives a different estimated line. They pin down the fit best near <math alttext="x bar"><mover><mi>x</mi><mo>‾</mo></mover></math> and disagree most at the edges of the <em>x</em> range.</figcaption>
+</figure>
+<details>
+  <summary>Long description of Figure 8</summary>
+  <p>A thick solid line represents the true population regression line. Seven thinner lines are drawn over it, each one the least squares fit from a different hypothetical sample. Their slopes and intercepts differ, so they cross the population line at different angles, but the bundle is narrowest near the middle of the plot, where a tick on the horizontal axis is labelled <math alttext="x bar"><mover><mi>x</mi><mo>‾</mo></mover></math>, and widest at the left and right extremes. This is the geometric content of the variance formula for a fitted value derived below: the term <math alttext="the quantity x sub i minus x bar squared over S S X"><mfrac><msup><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow><mn>2</mn></msup><mi>SSX</mi></mfrac></math> is zero at the mean of <em>x</em> and grows as you move away from it, so predictions are least certain far from the centre of the data.</p>
+</details>
+
+<h2 id="fitted">Distribution of the fitted values</h2>
+
+<p>The <strong>fitted values</strong> are</p>
+
+<div class="eq">
+<math display="block" alttext="y hat sub i equals beta hat sub 0 plus beta hat sub 1 x sub i">
+  <mrow>
+    <msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub><mo>=</mo>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>+</mo>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><msub><mi>x</mi><mi>i</mi></msub>
+  </mrow>
+</math>
+</div>
+
+<p>What is the distribution of <math alttext="y hat sub i"><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub></math>? It is normal, so we need only its mean and variance:</p>
+
+<div class="eq">
+<math display="block" alttext="y hat sub i is distributed normal with mean the expected value of y hat sub i and variance the variance of y hat sub i">
+  <mrow>
+    <msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub><mo>∼</mo><mi>N</mi>
+    <mrow><mo>(</mo>
+      <mi>E</mi><mo>(</mo><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub><mo>)</mo>
+      <mo>,</mo>
+      <mi>Var</mi><mo>(</mo><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub><mo>)</mo>
+    <mo>)</mo></mrow>
+  </mrow>
+</math>
+</div>
+
+<h3>The mean</h3>
+
+<div class="eq">
+<math display="block" alttext="the expected value of y hat sub i equals the expected value of beta hat sub 0 plus beta hat sub 1 x sub i, which equals the expected value of beta hat sub 0 plus the expected value of beta hat sub 1 times x sub i, which equals beta sub 0 plus beta sub 1 x sub i">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd><mrow><mi>E</mi><mo>(</mo><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub><mo>)</mo></mrow></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow><mi>E</mi><mrow><mo>(</mo>
+          <msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>+</mo>
+          <msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><msub><mi>x</mi><mi>i</mi></msub>
+        <mo>)</mo></mrow></mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <mi>E</mi><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>)</mo>
+          <mo>+</mo>
+          <mi>E</mi><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>)</mo>
+          <msub><mi>x</mi><mi>i</mi></msub>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <msub><mi>β</mi><mn>0</mn></msub><mo>+</mo>
+          <msub><mi>β</mi><mn>1</mn></msub><msub><mi>x</mi><mi>i</mi></msub>
+        </mrow>
+      </mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<h3>The variance</h3>
+
+<div class="note">
+  <p><span class="tag" style="color:var(--est)">Recall</span> For two random variables,</p>
+  <math display="block" alttext="the variance of X plus Y equals the variance of X plus the variance of Y plus two times the covariance of X and Y">
+    <mrow>
+      <mi>Var</mi><mo>(</mo><mi>X</mi><mo>+</mo><mi>Y</mi><mo>)</mo><mo>=</mo>
+      <mi>Var</mi><mo>(</mo><mi>X</mi><mo>)</mo><mo>+</mo>
+      <mi>Var</mi><mo>(</mo><mi>Y</mi><mo>)</mo><mo>+</mo>
+      <mn>2</mn><mi>Cov</mi><mo>(</mo><mi>X</mi><mo>,</mo><mi>Y</mi><mo>)</mo>
+    </mrow>
+  </math>
+  <p><strong>But we don't need this.</strong> Instead, rewrite <math alttext="y hat sub i"><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub></math> as a single weighted sum of the responses, and the covariance term never appears.</p>
+</div>
+
+<div class="note">
+  <p><span class="tag" style="color:var(--pop)">Recall</span> From last class, the slope is a linear combination of the responses:</p>
+  <math display="block" alttext="beta hat sub 1 equals the sum over j of k sub j y sub j">
+    <mrow>
+      <msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>=</mo>
+      <munder><mo>∑</mo><mi>j</mi></munder><msub><mi>k</mi><mi>j</mi></msub><msub><mi>y</mi><mi>j</mi></msub>
+    </mrow>
+  </math>
+</div>
+
+<div class="eq">
+<math display="block" alttext="the variance of y hat sub i equals the variance of beta hat sub 0 plus beta hat sub 1 x sub i, equals the variance of y bar minus beta hat sub 1 x bar plus beta hat sub 1 x sub i, equals the variance of one over n times the sum over j of y sub j plus beta hat sub 1 times the quantity x sub i minus x bar, equals the variance of one over n times the sum over j of y sub j plus the quantity x sub i minus x bar times the sum over j of k sub j y sub j, equals the variance of the sum over j of the quantity one over n plus the quantity x sub i minus x bar times k sub j, all times y sub j, equals the variance of the sum over j of k tilde sub j y sub j, equals the sum over j of the variance of k tilde sub j y sub j">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd><mrow><mi>Var</mi><mo>(</mo><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub><mo>)</mo></mrow></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow><mi>Var</mi><mrow><mo>(</mo>
+          <msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>+</mo>
+          <msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><msub><mi>x</mi><mi>i</mi></msub>
+        <mo>)</mo></mrow></mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow><mi>Var</mi><mrow><mo>(</mo>
+          <mover><mi>y</mi><mo>‾</mo></mover><mo>−</mo>
+          <msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mover><mi>x</mi><mo>‾</mo></mover><mo>+</mo>
+          <msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><msub><mi>x</mi><mi>i</mi></msub>
+        <mo>)</mo></mrow></mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow><mi>Var</mi><mrow><mo>(</mo>
+          <mfrac><mn>1</mn><mi>n</mi></mfrac>
+          <munder><mo>∑</mo><mi>j</mi></munder><msub><mi>y</mi><mi>j</mi></msub>
+          <mo>+</mo>
+          <msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub>
+          <mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow>
+        <mo>)</mo></mrow></mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow><mi>Var</mi><mrow><mo>(</mo>
+          <mfrac><mn>1</mn><mi>n</mi></mfrac>
+          <munder><mo>∑</mo><mi>j</mi></munder><msub><mi>y</mi><mi>j</mi></msub>
+          <mo>+</mo>
+          <mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow>
+          <munder><mo>∑</mo><mi>j</mi></munder><msub><mi>k</mi><mi>j</mi></msub><msub><mi>y</mi><mi>j</mi></msub>
+        <mo>)</mo></mrow></mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow><mi>Var</mi><mrow><mo>(</mo>
+          <munder><mo>∑</mo><mi>j</mi></munder>
+          <mrow><mo>(</mo>
+            <mfrac><mn>1</mn><mi>n</mi></mfrac><mo>+</mo>
+            <mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow>
+            <msub><mi>k</mi><mi>j</mi></msub>
+          <mo>)</mo></mrow>
+          <msub><mi>y</mi><mi>j</mi></msub>
+        <mo>)</mo></mrow></mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow><mi>Var</mi><mrow><mo>(</mo>
+          <munder><mo>∑</mo><mi>j</mi></munder>
+          <msub><mover><mi>k</mi><mo>~</mo></mover><mi>j</mi></msub><msub><mi>y</mi><mi>j</mi></msub>
+        <mo>)</mo></mrow></mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <munder><mo>∑</mo><mi>j</mi></munder>
+          <mi>Var</mi><mo>(</mo><msub><mover><mi>k</mi><mo>~</mo></mover><mi>j</mi></msub><msub><mi>y</mi><mi>j</mi></msub><mo>)</mo>
+        </mrow>
+      </mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<div class="note">
+  <p><span class="tag" style="color:var(--est)">Definition</span> The combined weight in the line above is</p>
+  <math display="block" alttext="k tilde sub j equals one over n plus the quantity x sub i minus x bar times k sub j">
+    <mrow>
+      <msub><mover><mi>k</mi><mo>~</mo></mover><mi>j</mi></msub><mo>=</mo>
+      <mfrac><mn>1</mn><mi>n</mi></mfrac><mo>+</mo>
+      <mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow>
+      <msub><mi>k</mi><mi>j</mi></msub>
+    </mrow>
+  </math>
+  <p>Like <math alttext="k sub j"><msub><mi>k</mi><mi>j</mi></msub></math>, it is a constant, so it comes out of the variance squared.</p>
+</div>
+
+<p>Continuing:</p>
+
+<div class="eq">
+<math display="block" alttext="equals the sum over j of k tilde sub j squared times the variance of y sub j, equals sigma squared times the sum over j of k tilde sub j squared, and after simplification equals sigma squared times the quantity one over n plus the quantity x sub i minus x bar squared over S S X">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <munder><mo>∑</mo><mi>j</mi></munder>
+          <msubsup><mover><mi>k</mi><mo>~</mo></mover><mi>j</mi><mn>2</mn></msubsup>
+          <mi>Var</mi><mo>(</mo><msub><mi>y</mi><mi>j</mi></msub><mo>)</mo>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <msup><mi>σ</mi><mn>2</mn></msup>
+          <munder><mo>∑</mo><mi>j</mi></munder>
+          <msubsup><mover><mi>k</mi><mo>~</mo></mover><mi>j</mi><mn>2</mn></msubsup>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>⋮</mo></mtd>
+      <mtd></mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <msup><mi>σ</mi><mn>2</mn></msup>
+          <mrow><mo>(</mo>
+            <mfrac><mn>1</mn><mi>n</mi></mfrac><mo>+</mo>
+            <mfrac>
+              <msup><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow><mn>2</mn></msup>
+              <mi>SSX</mi>
+            </mfrac>
+          <mo>)</mo></mrow>
+        </mrow>
+      </mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<p>Putting the mean and variance together:</p>
+
+<div class="eq">
+<math display="block" alttext="y hat sub i is distributed normal with mean beta sub 0 plus beta sub 1 x sub i and variance sigma squared times the quantity one over n plus the quantity x sub i minus x bar squared over S S X">
+  <mrow>
+    <msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub><mo>∼</mo><mi>N</mi>
+    <mrow><mo>(</mo>
+      <msub><mi>β</mi><mn>0</mn></msub><mo>+</mo><msub><mi>β</mi><mn>1</mn></msub><msub><mi>x</mi><mi>i</mi></msub>
+      <mo>,</mo>
+      <msup><mi>σ</mi><mn>2</mn></msup>
+      <mrow><mo>(</mo>
+        <mfrac><mn>1</mn><mi>n</mi></mfrac><mo>+</mo>
+        <mfrac>
+          <msup><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow><mn>2</mn></msup>
+          <mi>SSX</mi>
+        </mfrac>
+      <mo>)</mo></mrow>
+    <mo>)</mo></mrow>
+  </mrow>
+</math>
+</div>
+
+<div class="note">
+  <p><span class="tag" style="color:var(--pop)">Think about</span></p>
+  <ul>
+    <li>What if <math alttext="x sub i equals zero"><mrow><msub><mi>x</mi><mi>i</mi></msub><mo>=</mo><mn>0</mn></mrow></math>?</li>
+    <li>What if <math alttext="x sub i equals x bar"><mrow><msub><mi>x</mi><mi>i</mi></msub><mo>=</mo><mover><mi>x</mi><mo>‾</mo></mover></mrow></math>?</li>
+  </ul>
+</div>
+
+<h2 id="residuals">II. Residuals</h2>
+
+<div class="eq">
+<math display="block" alttext="e sub i equals y sub i minus y hat sub i">
+  <mrow>
+    <msub><mi>e</mi><mi>i</mi></msub><mo>=</mo>
+    <msub><mi>y</mi><mi>i</mi></msub><mo>−</mo>
+    <msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub>
+  </mrow>
+</math>
+</div>
+
+<p>That is <strong>observed</strong> minus <strong>fitted</strong> (or expected).</p>
+
+<figure>
+<svg viewBox="0 0 560 300" role="img" aria-labelledby="fig9-t fig9-d" xmlns="http://www.w3.org/2000/svg">
+  <title id="fig9-t">Residuals as vertical distances from each observation to the fitted line</title>
+  <desc id="fig9-d">A straight fitted line rises across the plot, labelled y hat equals beta zero hat plus beta one hat x. Five data points sit above or below it, and from each point a short vertical segment runs to the line. These segments are the residuals: the observation minus the fitted value.</desc>
+  <line x1="60" y1="250" x2="510" y2="250" stroke="currentColor" stroke-width="2"/>
+  <line x1="60" y1="250" x2="60" y2="30" stroke="currentColor" stroke-width="2"/>
+  <polygon points="510,250 502,246 502,254" fill="currentColor"/>
+  <polygon points="60,30 56,38 64,38" fill="currentColor"/>
+  <text x="515" y="255" font-size="15" fill="currentColor">x</text>
+  <text x="42" y="28" font-size="15" fill="currentColor">y</text>
+  <line x1="80" y1="215" x2="470" y2="80" stroke="var(--accent)" stroke-width="3"/>
+  <text x="330" y="66" font-size="14" fill="var(--accent)">ŷ = β̂₀ + β̂₁x</text>
+  <g stroke="var(--pop)" stroke-width="3">
+    <line x1="140" y1="194" x2="140" y2="180"/>
+    <line x1="210" y1="170" x2="210" y2="205"/>
+    <line x1="280" y1="146" x2="280" y2="120"/>
+    <line x1="350" y1="122" x2="350" y2="140"/>
+    <line x1="420" y1="97" x2="420" y2="75"/>
+  </g>
+  <g fill="currentColor">
+    <circle cx="140" cy="180" r="4"/><circle cx="210" cy="205" r="4"/>
+    <circle cx="280" cy="120" r="4"/><circle cx="350" cy="140" r="4"/>
+    <circle cx="420" cy="75" r="4"/>
+  </g>
+  <!-- leader starts on the x=210 residual segment, so the label names the vertical lines -->
+  <line x1="210" y1="187" x2="286" y2="187" stroke="var(--pop)" stroke-width="2"/>
+  <polygon points="294,187 284,183 284,191" fill="var(--pop)"/>
+  <text x="300" y="192" font-size="15" fill="var(--pop)">eᵢ = yᵢ − ŷᵢ</text>
+</svg>
+<figcaption>Figure 9. Each residual is the signed vertical gap between an observation and the fitted line.</figcaption>
+</figure>
+<details>
+  <summary>Long description of Figure 9</summary>
+  <p>The plot shows a straight fitted line rising from lower left to upper right, labelled <math alttext="y hat equals beta hat sub 0 plus beta hat sub 1 x"><mrow><mover><mi>y</mi><mo>^</mo></mover><mo>=</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>+</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mi>x</mi></mrow></math>. Five observations are plotted; three sit above the line and two below it. From each observation a vertical segment runs to the line. An arrow drawn outward from the middle of one of those segments points to the label <math alttext="e sub i equals y sub i minus y hat sub i"><mrow><msub><mi>e</mi><mi>i</mi></msub><mo>=</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub></mrow></math>, identifying the vertical segments as the residuals. The segments are vertical rather than perpendicular to the line, which is the visual reminder that least squares minimizes squared error in <em>y</em> only. Points above the line have positive residuals, points below have negative ones, and the sum of all of them is zero — the first property proved in the next section.</p>
+</details>
+
+<h2 id="eps-vs-e">Difference between the errors and the residuals</h2>
+
+<p>The model error and the residual look similar but are not the same object:</p>
+
+<div class="eq">
+<math display="block" alttext="from y sub i equals beta sub 0 plus beta sub 1 x sub i plus epsilon sub i we get epsilon sub i equals y sub i minus beta sub 0 minus beta sub 1 x sub i">
+  <mrow>
+    <msub><mi>ε</mi><mi>i</mi></msub><mo>=</mo>
+    <msub><mi>y</mi><mi>i</mi></msub><mo>−</mo>
+    <msub><mi>β</mi><mn>0</mn></msub><mo>−</mo>
+    <msub><mi>β</mi><mn>1</mn></msub><msub><mi>x</mi><mi>i</mi></msub>
+  </mrow>
+</math>
+</div>
+
+<div class="eq">
+<math display="block" alttext="e sub i equals y sub i minus y hat sub i">
+  <mrow>
+    <msub><mi>e</mi><mi>i</mi></msub><mo>=</mo>
+    <msub><mi>y</mi><mi>i</mi></msub><mo>−</mo>
+    <msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub>
+  </mrow>
+</math>
+</div>
+
+<table>
+  <caption>Errors versus residuals: what is knowable</caption>
+  <thead>
+    <tr>
+      <th scope="col">Quantity</th>
+      <th scope="col">Built from</th>
+      <th scope="col">Can we compute it?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">
+        <math alttext="epsilon sub i"><msub><mi>ε</mi><mi>i</mi></msub></math> (error)
+      </th>
+      <td>
+        <math alttext="beta sub 0 and beta sub 1"><mrow><msub><mi>β</mi><mn>0</mn></msub><mo>,</mo><msub><mi>β</mi><mn>1</mn></msub></mrow></math> — the true parameters
+      </td>
+      <td><strong>No</strong> — we don't know these</td>
+    </tr>
+    <tr>
+      <th scope="row">
+        <math alttext="e sub i"><msub><mi>e</mi><mi>i</mi></msub></math> (residual)
+      </th>
+      <td>
+        <math alttext="beta hat sub 0 and beta hat sub 1"><mrow><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>,</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub></mrow></math> — the estimates
+      </td>
+      <td><strong>Yes</strong> — we know these</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The errors are assumed normal with constant variance:</p>
+
+<div class="eq">
+<math display="block" alttext="epsilon sub i is distributed normal with mean zero and variance sigma squared">
+  <mrow>
+    <msub><mi>ε</mi><mi>i</mi></msub><mo>∼</mo><mi>N</mi>
+    <mrow><mo>(</mo><mn>0</mn><mo>,</mo><msup><mi>σ</mi><mn>2</mn></msup><mo>)</mo></mrow>
+  </mrow>
+</math>
+</div>
+
+<p>What is the distribution of <math alttext="e sub i"><msub><mi>e</mi><mi>i</mi></msub></math>?</p>
+
+<div class="eq">
+<math display="block" alttext="e sub i is distributed normal with mean zero and variance sigma squared times the quantity one minus one over n minus the quantity x sub i minus x bar squared over S S X">
+  <mrow>
+    <msub><mi>e</mi><mi>i</mi></msub><mo>∼</mo><mi>N</mi>
+    <mrow><mo>(</mo>
+      <mn>0</mn><mo>,</mo>
+      <msup><mi>σ</mi><mn>2</mn></msup>
+      <mrow><mo>(</mo>
+        <mn>1</mn><mo>−</mo>
+        <mfrac><mn>1</mn><mi>n</mi></mfrac><mo>−</mo>
+        <mfrac>
+          <msup><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow><mn>2</mn></msup>
+          <mi>SSX</mi>
+        </mfrac>
+      <mo>)</mo></mrow>
+    <mo>)</mo></mrow>
+  </mrow>
+</math>
+</div>
+
+<div class="note">
+  <p><span class="tag" style="color:var(--est)">Exercise</span> <strong>How?</strong> The mean of <math alttext="zero"><mn>0</mn></math> was flagged in the original notes as something to justify — work out why <math alttext="the expected value of e sub i equals zero"><mrow><mi>E</mi><mo>(</mo><msub><mi>e</mi><mi>i</mi></msub><mo>)</mo><mo>=</mo><mn>0</mn></mrow></math>.</p>
+</div>
+
+<div class="note">
+  <p><strong>Note the variance.</strong> Residuals are <em>less</em> variable than the errors they estimate: the subtracted terms shrink <math alttext="sigma squared"><msup><mi>σ</mi><mn>2</mn></msup></math>. Fitting two coefficients uses up some of the variability in the data.</p>
+</div>
+
+<h2 id="props">III. Properties of the fitted values and residuals</h2>
+
+<h3>1. The residuals sum to zero</h3>
+
+<div class="eq">
+<math display="block" alttext="the sum over i of e sub i equals zero">
+  <mrow>
+    <munder><mo>∑</mo><mi>i</mi></munder><msub><mi>e</mi><mi>i</mi></msub><mo>=</mo><mn>0</mn>
+  </mrow>
+</math>
+</div>
+
+<p>Recall that <math alttext="the partial derivative of Q with respect to beta sub 0 equals zero"><mrow><mfrac><mrow><mo>∂</mo><mi>Q</mi></mrow><mrow><mo>∂</mo><msub><mi>β</mi><mn>0</mn></msub></mrow></mfrac><mo>=</mo><mn>0</mn></mrow></math> at the least squares solution:</p>
+
+<div class="eq">
+<math display="block" alttext="the derivative with respect to beta sub 0 of the sum of the quantity y sub i minus beta sub 0 minus beta sub 1 x sub i squared equals negative two times the sum of the quantity y sub i minus beta sub 0 minus beta sub 1 x sub i, equals zero; plugging in the estimates gives the sum of y sub i minus beta hat sub 0 minus beta hat sub 1 x sub i equals zero, which equals the sum of y sub i minus y hat sub i, which equals the sum of e sub i, which equals zero">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd>
+        <mrow>
+          <mfrac><mo>∂</mo><mrow><mo>∂</mo><msub><mi>β</mi><mn>0</mn></msub></mrow></mfrac>
+          <munder><mo>∑</mo><mi>i</mi></munder>
+          <msup><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><msub><mi>β</mi><mn>0</mn></msub><mo>−</mo><msub><mi>β</mi><mn>1</mn></msub><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow><mn>2</mn></msup>
+        </mrow>
+      </mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <mo>−</mo><mn>2</mn>
+          <munder><mo>∑</mo><mi>i</mi></munder>
+          <mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><msub><mi>β</mi><mn>0</mn></msub><mo>−</mo><msub><mi>β</mi><mn>1</mn></msub><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow>
+          <mo>=</mo><mn>0</mn>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd>
+        <mrow>
+          <munder><mo>∑</mo><mi>i</mi></munder>
+          <mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>−</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow>
+        </mrow>
+      </mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><mn>0</mn></mtd>
+    </mtr>
+    <mtr>
+      <mtd>
+        <mrow>
+          <munder><mo>∑</mo><mi>i</mi></munder>
+          <mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub><mo>)</mo></mrow>
+          <mo>=</mo>
+          <munder><mo>∑</mo><mi>i</mi></munder><msub><mi>e</mi><mi>i</mi></msub>
+        </mrow>
+      </mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><mn>0</mn></mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<p class="lede">The factor of <math alttext="negative two"><mrow><mo>−</mo><mn>2</mn></mrow></math> was cancelled in the original notes, since the whole expression is set to zero.</p>
+
+<h3>2. The fitted values and the observations have the same total</h3>
+
+<div class="eq">
+<math display="block" alttext="the sum over i of y sub i equals the sum over i of y hat sub i">
+  <mrow>
+    <munder><mo>∑</mo><mi>i</mi></munder><msub><mi>y</mi><mi>i</mi></msub>
+    <mo>=</mo>
+    <munder><mo>∑</mo><mi>i</mi></munder><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub>
+  </mrow>
+</math>
+</div>
+
+<p>Rearranging the definition of a residual, <math alttext="y hat sub i equals y sub i minus e sub i"><mrow><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub><mo>=</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><msub><mi>e</mi><mi>i</mi></msub></mrow></math>, and summing:</p>
+
+<div class="eq">
+<math display="block" alttext="the sum over i of y hat sub i equals the sum over i of y sub i minus the sum over i of e sub i, and the last sum is zero">
+  <mrow>
+    <munder><mo>∑</mo><mi>i</mi></munder><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub>
+    <mo>=</mo>
+    <munder><mo>∑</mo><mi>i</mi></munder><msub><mi>y</mi><mi>i</mi></msub>
+    <mo>−</mo>
+    <munder><mo>∑</mo><mi>i</mi></munder><msub><mi>e</mi><mi>i</mi></msub>
+  </mrow>
+</math>
+</div>
+
+<p>and the second sum is <math alttext="zero"><mn>0</mn></math> by property 1.</p>
+
+<h3>3. The residual sum of squares is the global minimum of <math alttext="Q"><mi>Q</mi></math></h3>
+
+<p><math alttext="the sum over i of e sub i squared"><mrow><munder><mo>∑</mo><mi>i</mi></munder><msubsup><mi>e</mi><mi>i</mi><mn>2</mn></msubsup></mrow></math> is the global minimum of <math alttext="Q of beta sub 0 and beta sub 1"><mrow><mi>Q</mi><mo>(</mo><msub><mi>β</mi><mn>0</mn></msub><mo>,</mo><msub><mi>β</mi><mn>1</mn></msub><mo>)</mo></mrow></math>, where</p>
+
+<div class="eq">
+<math display="block" alttext="Q of beta sub 0 and beta sub 1 equals the sum over i of the quantity y sub i minus beta sub 0 minus beta sub 1 x sub i, squared">
+  <mrow>
+    <mi>Q</mi><mo>(</mo><msub><mi>β</mi><mn>0</mn></msub><mo>,</mo><msub><mi>β</mi><mn>1</mn></msub><mo>)</mo>
+    <mo>=</mo>
+    <munder><mo>∑</mo><mi>i</mi></munder>
+    <msup><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><msub><mi>β</mi><mn>0</mn></msub><mo>−</mo><msub><mi>β</mi><mn>1</mn></msub><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow><mn>2</mn></msup>
+  </mrow>
+</math>
+</div>
+
+<figure>
+<svg viewBox="0 0 560 340" role="img" aria-labelledby="fig10-t fig10-d" xmlns="http://www.w3.org/2000/svg">
+  <title id="fig10-t">The least squares criterion as a bowl over the two coefficients, with its minimum marked</title>
+  <desc id="fig10-d">A three-dimensional sketch. A vertical axis is labelled Q, a horizontal axis beta zero, and a third axis going back into the page beta one. A bowl-shaped surface sits above the two coefficient axes. A dot marks the lowest point of the bowl, and a dashed line runs from that dot across to a mark on the Q axis labelled the sum of e sub i squared.</desc>
+  <line x1="110" y1="300" x2="110" y2="30" stroke="currentColor" stroke-width="2"/>
+  <polygon points="110,30 106,38 114,38" fill="currentColor"/>
+  <text x="86" y="30" font-size="16" fill="currentColor">Q</text>
+  <line x1="110" y1="300" x2="430" y2="300" stroke="currentColor" stroke-width="2"/>
+  <polygon points="430,300 422,296 422,304" fill="currentColor"/>
+  <text x="437" y="305" font-size="16" fill="currentColor">β₀</text>
+  <line x1="110" y1="300" x2="268" y2="142" stroke="currentColor" stroke-width="2"/>
+  <polygon points="268,142 260,144 266,150" fill="currentColor"/>
+  <text x="274" y="138" font-size="16" fill="currentColor">β₁</text>
+  <ellipse cx="360" cy="92" rx="86" ry="28" fill="none" stroke="var(--est)" stroke-width="2.5"/>
+  <path d="M274,92 C 286,186 434,186 446,92" fill="none" stroke="var(--est)" stroke-width="2.5"/>
+  <ellipse cx="360" cy="120" rx="56" ry="18" fill="none" stroke="var(--est)" stroke-width="1.5" opacity="0.75"/>
+  <ellipse cx="360" cy="140" rx="28" ry="9" fill="none" stroke="var(--est)" stroke-width="1.5" opacity="0.75"/>
+  <circle cx="360" cy="158" r="5" fill="var(--pop)"/>
+  <line x1="352" y1="158" x2="118" y2="204" stroke="var(--pop)" stroke-width="2" stroke-dasharray="6 5"/>
+  <circle cx="110" cy="206" r="5" fill="var(--pop)"/>
+  <text x="16" y="211" font-size="16" fill="var(--pop)">Σeᵢ²</text>
+  <line x1="360" y1="163" x2="360" y2="212" stroke="var(--pop)" stroke-width="2"/>
+  <circle cx="360" cy="216" r="4.5" fill="var(--pop)"/>
+  <text x="372" y="238" font-size="14" fill="var(--pop)">(β̂₀, β̂₁)</text>
+</svg>
+<figcaption>Figure 10. <math alttext="Q"><mi>Q</mi></math> is a convex bowl over the two coefficients; the least squares estimates sit under its lowest point, and the height there is <math alttext="the sum over i of e sub i squared"><mrow><munder><mo>∑</mo><mi>i</mi></munder><msubsup><mi>e</mi><mi>i</mi><mn>2</mn></msubsup></mrow></math>.</figcaption>
+</figure>
+<details>
+  <summary>Long description of Figure 10</summary>
+  <p>A perspective sketch with three axes meeting at one corner: <math alttext="Q"><mi>Q</mi></math> pointing up, <math alttext="beta sub 0"><msub><mi>β</mi><mn>0</mn></msub></math> pointing right, and <math alttext="beta sub 1"><msub><mi>β</mi><mn>1</mn></msub></math> pointing up-left into the page. Above the plane of the two coefficients floats a bowl, drawn as an outer rim ellipse, two smaller contour ellipses inside it, and a U-shaped profile — the surface <math alttext="Q of beta sub 0 and beta sub 1"><mrow><mi>Q</mi><mo>(</mo><msub><mi>β</mi><mn>0</mn></msub><mo>,</mo><msub><mi>β</mi><mn>1</mn></msub><mo>)</mo></mrow></math>. A dot marks the bottom of the bowl. A solid vertical line drops from that dot to the coefficient plane, marking the pair <math alttext="beta hat sub 0, beta hat sub 1"><mrow><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>,</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>)</mo></mrow></math>, and a dashed line runs from the same dot across to the <math alttext="Q"><mi>Q</mi></math> axis, where a mark is labelled <math alttext="the sum of e sub i squared"><mrow><munder><mo>∑</mo><mi>i</mi></munder><msubsup><mi>e</mi><mi>i</mi><mn>2</mn></msubsup></mrow></math>. Because the surface is a bowl rather than a saddle, the stationary point found by setting both partial derivatives to zero is a genuine global minimum, and its height is the residual sum of squares.</p>
+</details>
+
+<h3>4. The residuals are orthogonal to the predictor</h3>
+
+<div class="eq">
+<math display="block" alttext="the sum over i of e sub i x sub i equals zero">
+  <mrow>
+    <munder><mo>∑</mo><mi>i</mi></munder><msub><mi>e</mi><mi>i</mi></msub><msub><mi>x</mi><mi>i</mi></msub>
+    <mo>=</mo><mn>0</mn>
+  </mrow>
+</math>
+</div>
+
+<p>This holds because <math alttext="the partial derivative of Q with respect to beta sub 1 equals zero"><mrow><mfrac><mrow><mo>∂</mo><mi>Q</mi></mrow><mrow><mo>∂</mo><msub><mi>β</mi><mn>1</mn></msub></mrow></mfrac><mo>=</mo><mn>0</mn></mrow></math> at <math alttext="beta hat sub 0, beta hat sub 1"><mrow><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>,</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>)</mo></mrow></math>:</p>
+
+<div class="eq">
+<math display="block" alttext="negative two times the sum over i of the quantity y sub i minus beta sub 0 minus beta sub 1 x sub i, times x sub i, equals zero">
+  <mrow>
+    <mo>−</mo><mn>2</mn>
+    <munder><mo>∑</mo><mi>i</mi></munder>
+    <mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><msub><mi>β</mi><mn>0</mn></msub><mo>−</mo><msub><mi>β</mi><mn>1</mn></msub><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow>
+    <msub><mi>x</mi><mi>i</mi></msub>
+    <mo>=</mo><mn>0</mn>
+  </mrow>
+</math>
+</div>
+
+<h3>5. The residuals are orthogonal to the fitted values</h3>
+
+<div class="eq">
+<math display="block" alttext="the sum over i of e sub i y hat sub i equals zero">
+  <mrow>
+    <munder><mo>∑</mo><mi>i</mi></munder><msub><mi>e</mi><mi>i</mi></msub><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub>
+    <mo>=</mo><mn>0</mn>
+  </mrow>
+</math>
+</div>
+
+<div class="eq">
+<math display="block" alttext="the sum over i of e sub i times the quantity beta hat sub 0 plus beta hat sub 1 x sub i equals the sum of e sub i beta hat sub 0 plus the sum of e sub i beta hat sub 1 x sub i, which equals beta hat sub 0 times the sum of e sub i plus beta hat sub 1 times the sum of e sub i x sub i">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd>
+        <mrow>
+          <munder><mo>∑</mo><mi>i</mi></munder><msub><mi>e</mi><mi>i</mi></msub>
+          <mrow><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>+</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><msub><mi>x</mi><mi>i</mi></msub><mo>)</mo></mrow>
+        </mrow>
+      </mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <munder><mo>∑</mo><mi>i</mi></munder><msub><mi>e</mi><mi>i</mi></msub><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub>
+          <mo>+</mo>
+          <munder><mo>∑</mo><mi>i</mi></munder><msub><mi>e</mi><mi>i</mi></msub><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><msub><mi>x</mi><mi>i</mi></msub>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub>
+          <munder><mo>∑</mo><mi>i</mi></munder><msub><mi>e</mi><mi>i</mi></msub>
+          <mo>+</mo>
+          <msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub>
+          <munder><mo>∑</mo><mi>i</mi></munder><msub><mi>e</mi><mi>i</mi></msub><msub><mi>x</mi><mi>i</mi></msub>
+        </mrow>
+      </mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<p>Both sums are <math alttext="zero"><mn>0</mn></math> — the first by property 1, the second by property 4 — so the whole expression is <math alttext="zero"><mn>0</mn></math>.</p>
+
+<h2 id="sigma">IV. An estimator for the error variance</h2>
+
+<p>With the model <math alttext="y sub i equals beta sub 0 plus beta sub 1 x sub i plus epsilon sub i"><mrow><msub><mi>y</mi><mi>i</mi></msub><mo>=</mo><msub><mi>β</mi><mn>0</mn></msub><mo>+</mo><msub><mi>β</mi><mn>1</mn></msub><msub><mi>x</mi><mi>i</mi></msub><mo>+</mo><msub><mi>ε</mi><mi>i</mi></msub></mrow></math> and <math alttext="epsilon sub i distributed normal with mean zero and variance sigma squared"><mrow><msub><mi>ε</mi><mi>i</mi></msub><mo>∼</mo><mi>N</mi><mo>(</mo><mn>0</mn><mo>,</mo><msup><mi>σ</mi><mn>2</mn></msup><mo>)</mo></mrow></math>, let's find an unbiased estimator <math alttext="sigma hat squared"><msup><mover><mi>σ</mi><mo>^</mo></mover><mn>2</mn></msup></math> — one with</p>
+
+<div class="eq">
+<math display="block" alttext="the expected value of sigma hat squared equals sigma squared">
+  <mrow>
+    <mi>E</mi><mo>(</mo><msup><mover><mi>σ</mi><mo>^</mo></mover><mn>2</mn></msup><mo>)</mo>
+    <mo>=</mo><msup><mi>σ</mi><mn>2</mn></msup>
+  </mrow>
+</math>
+</div>
+
+<div class="note">
+  <p><span class="tag">Given to you</span></p>
+  <math display="block" alttext="the sum over i of e sub i squared divided by sigma squared is distributed chi-squared with n minus p degrees of freedom">
+    <mrow>
+      <mfrac>
+        <mrow><munder><mo>∑</mo><mi>i</mi></munder><msubsup><mi>e</mi><mi>i</mi><mn>2</mn></msubsup></mrow>
+        <msup><mi>σ</mi><mn>2</mn></msup>
+      </mfrac>
+      <mo>∼</mo>
+      <msubsup><mi>χ</mi><mrow><mi>n</mi><mo>−</mo><mi>p</mi></mrow><mn>2</mn></msubsup>
+    </mrow>
+  </math>
+  <p>where <math alttext="p"><mi>p</mi></math> is the number of <math alttext="beta"><mi>β</mi></math>'s in the model. For SLR, <math alttext="p equals two"><mrow><mi>p</mi><mo>=</mo><mn>2</mn></mrow></math>.</p>
+</div>
+
+<figure>
+<svg viewBox="0 0 560 290" role="img" aria-labelledby="fig11-t fig11-d" xmlns="http://www.w3.org/2000/svg">
+  <title id="fig11-t">Density of a chi-squared distribution</title>
+  <desc id="fig11-d">A right-skewed density curve starting at zero on the left, rising steeply to a peak near the left-hand side, then falling away gradually into a long tail to the right. The vertical axis is labelled f of v and the horizontal axis v.</desc>
+  <line x1="70" y1="250" x2="510" y2="250" stroke="currentColor" stroke-width="2"/>
+  <line x1="70" y1="250" x2="70" y2="40" stroke="currentColor" stroke-width="2"/>
+  <polygon points="510,250 502,246 502,254" fill="currentColor"/>
+  <polygon points="70,40 66,48 74,48" fill="currentColor"/>
+  <text x="20" y="52" font-size="16" fill="currentColor">f(v)</text>
+  <text x="515" y="255" font-size="16" fill="currentColor">v</text>
+  <path d="M70,250 C 88,250 106,88 148,84 C 198,80 238,152 302,202 C 362,240 428,248 492,250"
+        fill="none" stroke="var(--est)" stroke-width="3"/>
+</svg>
+<figcaption>Figure 11. A chi-squared density: non-negative, right-skewed, with a long upper tail.</figcaption>
+</figure>
+<details>
+  <summary>Long description of Figure 11</summary>
+  <p>The horizontal axis is <math alttext="v"><mi>v</mi></math>, the value taken by a chi-squared random variable, and the vertical axis is its density <math alttext="f of v"><mrow><mi>f</mi><mo>(</mo><mi>v</mi><mo>)</mo></mrow></math>. The curve starts at the origin, climbs steeply to a peak in the left third of the plot, then decays slowly, staying above the axis far to the right. The asymmetry matters: unlike the normal distributions used for the coefficients, this distribution lives only on non-negative values, which is what you want for a sum of squares.</p>
+</details>
+
+<p>The building block is a sum of squared standard normals:</p>
+
+<div class="eq">
+<math display="block" alttext="V equals the sum from i equals 1 to n of z sub i squared, distributed chi-squared with n degrees of freedom, where z sub i is standard normal">
+  <mrow>
+    <mi>V</mi><mo>=</mo>
+    <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover>
+    <msubsup><mi>z</mi><mi>i</mi><mn>2</mn></msubsup>
+    <mo>∼</mo>
+    <msubsup><mi>χ</mi><mi>n</mi><mn>2</mn></msubsup>
+    <mo lspace="1.5em">,</mo><mspace width="0.5em"></mspace>
+    <msub><mi>z</mi><mi>i</mi></msub><mo>∼</mo><mi>N</mi><mo>(</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo>)</mo>
+  </mrow>
+</math>
+</div>
+
+<table>
+  <caption>Properties of a chi-squared random variable with <math alttext="n"><mi>n</mi></math> degrees of freedom</caption>
+  <thead>
+    <tr><th scope="col">Quantity</th><th scope="col">Value</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row"><math alttext="the expected value of V"><mrow><mi>E</mi><mo>(</mo><mi>V</mi><mo>)</mo></mrow></math></th>
+      <td><math alttext="n"><mi>n</mi></math></td>
+    </tr>
+    <tr>
+      <th scope="row"><math alttext="the variance of V"><mrow><mi>Var</mi><mo>(</mo><mi>V</mi><mo>)</mo></mrow></math></th>
+      <td><math alttext="two n"><mrow><mn>2</mn><mi>n</mi></mrow></math></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>For SLR, with <math alttext="p equals two"><mrow><mi>p</mi><mo>=</mo><mn>2</mn></mrow></math>:</p>
+
+<div class="eq">
+<math display="block" alttext="V equals the sum over i of e sub i squared over sigma squared, distributed chi-squared with n minus 2 degrees of freedom">
+  <mrow>
+    <mi>V</mi><mo>=</mo>
+    <mfrac>
+      <mrow><munder><mo>∑</mo><mi>i</mi></munder><msubsup><mi>e</mi><mi>i</mi><mn>2</mn></msubsup></mrow>
+      <msup><mi>σ</mi><mn>2</mn></msup>
+    </mfrac>
+    <mo>∼</mo>
+    <msubsup><mi>χ</mi><mrow><mi>n</mi><mo>−</mo><mn>2</mn></mrow><mn>2</mn></msubsup>
+  </mrow>
+</math>
+</div>
+
+<p>So its expected value is <math alttext="n minus 2"><mrow><mi>n</mi><mo>−</mo><mn>2</mn></mrow></math>, and we can solve for <math alttext="sigma squared"><msup><mi>σ</mi><mn>2</mn></msup></math>:</p>
+
+<div class="eq">
+<math display="block" alttext="the expected value of the sum of e sub i squared over sigma squared equals n minus 2; therefore one over sigma squared times the expected value of the sum of e sub i squared equals n minus 2; therefore one over n minus 2 times the expected value of the sum of e sub i squared equals sigma squared; therefore the expected value of the sum of e sub i squared over n minus 2 equals sigma squared">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd>
+        <mrow>
+          <mi>E</mi>
+          <mrow><mo>(</mo>
+            <mfrac>
+              <mrow><munder><mo>∑</mo><mi>i</mi></munder><msubsup><mi>e</mi><mi>i</mi><mn>2</mn></msubsup></mrow>
+              <msup><mi>σ</mi><mn>2</mn></msup>
+            </mfrac>
+          <mo>)</mo></mrow>
+        </mrow>
+      </mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><mrow><mi>n</mi><mo>−</mo><mn>2</mn></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd>
+        <mrow>
+          <mfrac><mn>1</mn><msup><mi>σ</mi><mn>2</mn></msup></mfrac>
+          <mi>E</mi>
+          <mrow><mo>(</mo><munder><mo>∑</mo><mi>i</mi></munder><msubsup><mi>e</mi><mi>i</mi><mn>2</mn></msubsup><mo>)</mo></mrow>
+        </mrow>
+      </mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><mrow><mi>n</mi><mo>−</mo><mn>2</mn></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd>
+        <mrow>
+          <mfrac><mn>1</mn><mrow><mi>n</mi><mo>−</mo><mn>2</mn></mrow></mfrac>
+          <mi>E</mi>
+          <mrow><mo>(</mo><munder><mo>∑</mo><mi>i</mi></munder><msubsup><mi>e</mi><mi>i</mi><mn>2</mn></msubsup><mo>)</mo></mrow>
+        </mrow>
+      </mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><msup><mi>σ</mi><mn>2</mn></msup></mtd>
+    </mtr>
+    <mtr>
+      <mtd>
+        <mrow>
+          <mi>E</mi>
+          <mrow><mo>(</mo>
+            <mfrac>
+              <mrow><munder><mo>∑</mo><mi>i</mi></munder><msubsup><mi>e</mi><mi>i</mi><mn>2</mn></msubsup></mrow>
+              <mrow><mi>n</mi><mo>−</mo><mn>2</mn></mrow>
+            </mfrac>
+          <mo>)</mo></mrow>
+        </mrow>
+      </mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><msup><mi>σ</mi><mn>2</mn></msup></mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<p>The quantity inside that last expectation is our estimator:</p>
+
+<div class="eq">
+<math display="block" alttext="sigma hat squared equals the sum over i of e sub i squared divided by n minus 2">
+  <mrow>
+    <msup><mover><mi>σ</mi><mo>^</mo></mover><mn>2</mn></msup>
+    <mo>=</mo>
+    <mfrac>
+      <mrow><munder><mo>∑</mo><mi>i</mi></munder><msubsup><mi>e</mi><mi>i</mi><mn>2</mn></msubsup></mrow>
+      <mrow><mi>n</mi><mo>−</mo><mn>2</mn></mrow>
+    </mfrac>
+  </mrow>
+</math>
+</div>
+
+<p>This is the <strong>mean squared error (MSE)</strong>.</p>
+
+<div class="note">
+  <p><span class="tag" style="color:var(--est)">Note</span> The MLE for <math alttext="sigma squared"><msup><mi>σ</mi><mn>2</mn></msup></math> is <strong>biased</strong>,</p>
+  <math display="block" alttext="the sum over i of e sub i squared divided by n">
+    <mfrac>
+      <mrow><munder><mo>∑</mo><mi>i</mi></munder><msubsup><mi>e</mi><mi>i</mi><mn>2</mn></msubsup></mrow>
+      <mi>n</mi>
+    </mfrac>
+  </math>
+  <p>but it maximizes the likelihood. Dividing by <math alttext="n minus 2"><mrow><mi>n</mi><mo>−</mo><mn>2</mn></mrow></math> instead of <math alttext="n"><mi>n</mi></math> is what buys unbiasedness.</p>
+</div>
+
+<h2 id="testing">V. Hypothesis testing for SLR</h2>
+
+<p>Say we want to test specific values of the slope. We know</p>
+
+<div class="eq">
+<math display="block" alttext="beta hat sub 1 is distributed normal with mean beta sub 1 and variance sigma squared over S S X">
+  <mrow>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>∼</mo><mi>N</mi>
+    <mrow><mo>(</mo>
+      <msub><mi>β</mi><mn>1</mn></msub><mo>,</mo>
+      <mfrac><msup><mi>σ</mi><mn>2</mn></msup><mi>SSX</mi></mfrac>
+    <mo>)</mo></mrow>
+  </mrow>
+</math>
+</div>
+
+<p>The hypothesis testing framework has five steps:</p>
+
+<ol class="steps">
+  <li><strong>Hypotheses</strong></li>
+  <li><strong>Test statistic</strong></li>
+  <li><strong>Choose <math alttext="alpha"><mi>α</mi></math></strong></li>
+  <li><strong>Find cutoff</strong></li>
+  <li><strong>Make decision</strong></li>
+</ol>
+
+<h3>1. Hypotheses</h3>
+
+<div class="eq">
+<math display="block" alttext="H naught: beta sub 1 equals beta sub 1 star; H one: beta sub 1 is not equal to beta sub 1 star">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd><msub><mi>H</mi><mn>0</mn></msub></mtd>
+      <mtd><mo>:</mo></mtd>
+      <mtd><mrow><msub><mi>β</mi><mn>1</mn></msub><mo>=</mo><msubsup><mi>β</mi><mn>1</mn><mo>*</mo></msubsup></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd><msub><mi>H</mi><mn>1</mn></msub></mtd>
+      <mtd><mo>:</mo></mtd>
+      <mtd><mrow><msub><mi>β</mi><mn>1</mn></msub><mo>≠</mo><msubsup><mi>β</mi><mn>1</mn><mo>*</mo></msubsup></mrow></mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<h3>2. Test statistic</h3>
+
+<div class="note">
+  <p><strong>Standard error.</strong> For any estimator,</p>
+  <math display="block" alttext="the standard error of theta hat equals the square root of the variance of theta hat">
+    <mrow>
+      <mi>SE</mi><mo>(</mo><mover><mi>θ</mi><mo>^</mo></mover><mo>)</mo>
+      <mo>=</mo>
+      <msqrt><mrow><mi>Var</mi><mo>(</mo><mover><mi>θ</mi><mo>^</mo></mover><mo>)</mo></mrow></msqrt>
+    </mrow>
+  </math>
+</div>
+
+<div class="eq">
+<math display="block" alttext="Z equals beta hat sub 1 minus beta sub 1 star, over the standard error of beta hat sub 1, which equals beta hat sub 1 minus beta sub 1 star over the square root of sigma squared over S S X, which equals beta hat sub 1 minus beta sub 1 star over sigma divided by the square root of S S X, and is distributed standard normal">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd><mi>Z</mi></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mfrac>
+          <mrow><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>−</mo><msubsup><mi>β</mi><mn>1</mn><mo>*</mo></msubsup></mrow>
+          <mrow><mi>SE</mi><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>)</mo></mrow>
+        </mfrac>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mfrac>
+          <mrow><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>−</mo><msubsup><mi>β</mi><mn>1</mn><mo>*</mo></msubsup></mrow>
+          <msqrt><mfrac><msup><mi>σ</mi><mn>2</mn></msup><mi>SSX</mi></mfrac></msqrt>
+        </mfrac>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <mfrac>
+            <mrow><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>−</mo><msubsup><mi>β</mi><mn>1</mn><mo>*</mo></msubsup></mrow>
+            <mfrac><mi>σ</mi><msqrt><mi>SSX</mi></msqrt></mfrac>
+          </mfrac>
+          <mo>∼</mo>
+          <mi>N</mi><mo>(</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo>)</mo>
+        </mrow>
+      </mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<p>But <math alttext="sigma"><mi>σ</mi></math> is unknown, so use the <strong>estimated</strong> standard error</p>
+
+<div class="eq">
+<math display="block" alttext="the estimated standard error of beta hat sub 1 equals sigma hat over the square root of S S X">
+  <mrow>
+    <mover><mi>SE</mi><mo>^</mo></mover><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>)</mo>
+    <mo>=</mo>
+    <mfrac><mover><mi>σ</mi><mo>^</mo></mover><msqrt><mi>SSX</mi></msqrt></mfrac>
+  </mrow>
+</math>
+</div>
+
+<p>which changes the reference distribution from normal to <math alttext="t"><mi>t</mi></math>:</p>
+
+<div class="eq">
+<math display="block" alttext="t equals beta hat sub 1 minus beta sub 1 star, over sigma hat divided by the square root of S S X, distributed as t with n minus 2 degrees of freedom">
+  <mrow>
+    <mi>t</mi><mo>=</mo>
+    <mfrac>
+      <mrow><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>−</mo><msubsup><mi>β</mi><mn>1</mn><mo>*</mo></msubsup></mrow>
+      <mfrac><mover><mi>σ</mi><mo>^</mo></mover><msqrt><mi>SSX</mi></msqrt></mfrac>
+    </mfrac>
+    <mo>∼</mo>
+    <msub><mi>t</mi><mrow><mi>n</mi><mo>−</mo><mn>2</mn></mrow></msub>
+  </mrow>
+</math>
+</div>
+
+<h3>3 and 4. Choose <math alttext="alpha"><mi>α</mi></math> and find the cutoff</h3>
+
+<figure>
+<svg viewBox="0 0 560 300" role="img" aria-labelledby="fig12-t fig12-d" xmlns="http://www.w3.org/2000/svg">
+  <title id="fig12-t">The t distribution with two rejection tails and the upper cutoff marked</title>
+  <desc id="fig12-d">A symmetric bell-shaped curve labelled t with n minus 2 degrees of freedom, over a horizontal axis with zero at the centre. Two vertical lines cut off a small tail area on each side, each labelled alpha over two, and the central region between them is labelled one minus alpha. The right-hand cutoff on the axis is labelled t star at one minus alpha over two with n minus 2 degrees of freedom.</desc>
+  <line x1="40" y1="240" x2="520" y2="240" stroke="currentColor" stroke-width="2"/>
+  <polygon points="520,240 512,236 512,244" fill="currentColor"/>
+  <text x="524" y="245" font-size="16" fill="currentColor">t</text>
+  <path d="M55,238 C 150,232 200,72 280,70 C 360,72 410,232 505,238"
+        fill="none" stroke="currentColor" stroke-width="3"/>
+  <text x="300" y="52" font-size="14" fill="var(--muted)">t (n−2)</text>
+  <line x1="180" y1="240" x2="180" y2="196" stroke="currentColor" stroke-width="2"/>
+  <line x1="380" y1="240" x2="380" y2="196" stroke="currentColor" stroke-width="2"/>
+  <text x="280" y="160" font-size="18" fill="currentColor" text-anchor="middle">1 − α</text>
+  <line x1="120" y1="216" x2="150" y2="234" stroke="var(--pop)" stroke-width="1.5"/>
+  <text x="72" y="212" font-size="16" fill="var(--pop)">α/2</text>
+  <line x1="440" y1="216" x2="410" y2="234" stroke="var(--pop)" stroke-width="1.5"/>
+  <text x="446" y="212" font-size="16" fill="var(--pop)">α/2</text>
+  <line x1="280" y1="234" x2="280" y2="246" stroke="currentColor" stroke-width="2"/>
+  <text x="280" y="266" font-size="16" fill="currentColor" text-anchor="middle">0</text>
+  <text x="380" y="286" font-size="15" fill="var(--est)" text-anchor="middle">t*(1−α/2, n−2)</text>
+  <line x1="380" y1="248" x2="380" y2="268" stroke="var(--est)" stroke-width="1.5"/>
+</svg>
+<figcaption>Figure 12. Choosing <math alttext="alpha"><mi>α</mi></math> fixes the two tail areas; the cutoff is the <math alttext="t"><mi>t</mi></math> value with <math alttext="one minus alpha over two"><mrow><mn>1</mn><mo>−</mo><mi>α</mi><mo>/</mo><mn>2</mn></mrow></math> of the distribution below it.</figcaption>
+</figure>
+<details>
+  <summary>Long description of Figure 12</summary>
+  <p>A symmetric bell-shaped density for the <math alttext="t"><mi>t</mi></math> distribution with <math alttext="n minus 2"><mrow><mi>n</mi><mo>−</mo><mn>2</mn></mrow></math> degrees of freedom sits over a horizontal axis whose centre is marked <math alttext="zero"><mn>0</mn></math>. Two vertical lines, placed symmetrically either side of centre, divide the area under the curve into three parts: a small tail on the left, a small tail on the right, and the bulk in the middle. Leader lines point to each tail, labelling both <math alttext="alpha over two"><mrow><mi>α</mi><mo>/</mo><mn>2</mn></mrow></math>, and the central region is labelled <math alttext="one minus alpha"><mrow><mn>1</mn><mo>−</mo><mi>α</mi></mrow></math>. The position of the right-hand line on the axis is labelled <math alttext="t star at one minus alpha over two, n minus 2"><msubsup><mi>t</mi><mrow><mn>1</mn><mo>−</mo><mi>α</mi><mo>/</mo><mn>2</mn><mo>,</mo><mi>n</mi><mo>−</mo><mn>2</mn></mrow><mo>*</mo></msubsup></math>. Because the test is two-sided, the chosen error rate <math alttext="alpha"><mi>α</mi></math> is split evenly between the two tails, which is why the cutoff is indexed by <math alttext="one minus alpha over two"><mrow><mn>1</mn><mo>−</mo><mi>α</mi><mo>/</mo><mn>2</mn></mrow></math> rather than <math alttext="one minus alpha"><mrow><mn>1</mn><mo>−</mo><mi>α</mi></mrow></math>.</p>
+</details>
+
+<h3>5. Make the decision</h3>
+
+<div class="eq">
+<math display="block" alttext="if the absolute value of t is greater than t star at one minus alpha over two with n minus 2 degrees of freedom, then reject H naught">
+  <mrow>
+    <mrow><mo>|</mo><mi>t</mi><mo>|</mo></mrow>
+    <mo>&gt;</mo>
+    <msubsup><mi>t</mi><mrow><mn>1</mn><mo>−</mo><mi>α</mi><mo>/</mo><mn>2</mn><mo>,</mo><mi>n</mi><mo>−</mo><mn>2</mn></mrow><mo>*</mo></msubsup>
+  </mrow>
+</math>
+</div>
+
+<p>If that holds, <strong>reject <math alttext="H naught"><msub><mi>H</mi><mn>0</mn></msub></math></strong>: there is enough evidence to suggest <math alttext="beta hat sub 1 is not equal to beta sub 1 star"><mrow><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>≠</mo><msubsup><mi>β</mi><mn>1</mn><mo>*</mo></msubsup></mrow></math>.</p>
+
+<div class="note">
+  <p><span class="tag" style="color:var(--est)">Note</span> Usually we use <math alttext="H naught: beta sub 1 equals zero"><mrow><msub><mi>H</mi><mn>0</mn></msub><mo>:</mo><msub><mi>β</mi><mn>1</mn></msub><mo>=</mo><mn>0</mn></mrow></math>. In this case, if we reject <math alttext="H naught"><msub><mi>H</mi><mn>0</mn></msub></math> we say "<em>x</em> is a significant predictor of <em>y</em>."</p>
+</div>
+
+<h2 id="intercept-test">Testing the intercept</h2>
+
+<div class="eq">
+<math display="block" alttext="H naught: beta sub 0 equals beta sub 0 star; H one: beta sub 0 is not equal to beta sub 0 star">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd><msub><mi>H</mi><mn>0</mn></msub></mtd>
+      <mtd><mo>:</mo></mtd>
+      <mtd><mrow><msub><mi>β</mi><mn>0</mn></msub><mo>=</mo><msubsup><mi>β</mi><mn>0</mn><mo>*</mo></msubsup></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd><msub><mi>H</mi><mn>1</mn></msub></mtd>
+      <mtd><mo>:</mo></mtd>
+      <mtd><mrow><msub><mi>β</mi><mn>0</mn></msub><mo>≠</mo><msubsup><mi>β</mi><mn>0</mn><mo>*</mo></msubsup></mrow></mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<div class="eq">
+<math display="block" alttext="t equals beta hat sub 0 minus beta sub 0 star, over sigma hat times the square root of the quantity one over n plus x bar over S S X">
+  <mrow>
+    <mi>t</mi><mo>=</mo>
+    <mfrac>
+      <mrow><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>−</mo><msubsup><mi>β</mi><mn>0</mn><mo>*</mo></msubsup></mrow>
+      <mrow>
+        <mover><mi>σ</mi><mo>^</mo></mover>
+        <msqrt>
+          <mrow>
+            <mfrac><mn>1</mn><mi>n</mi></mfrac><mo>+</mo>
+            <mfrac><mover><mi>x</mi><mo>‾</mo></mover><mi>SSX</mi></mfrac>
+          </mrow>
+        </msqrt>
+      </mrow>
+    </mfrac>
+  </mrow>
+</math>
+</div>
+
+<div class="note">
+  <p><span class="tag" style="color:var(--pop)">Transcription note</span> The denominator above is copied exactly as written on page 10 of the handwritten notes, with <math alttext="x bar over S S X"><mfrac><mover><mi>x</mi><mo>‾</mo></mover><mi>SSX</mi></mfrac></math>. Every other appearance of this standard error — the sampling distribution of <math alttext="beta hat sub 0"><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub></math> earlier in these notes, and the confidence interval below — carries <math alttext="x bar squared over S S X"><mfrac><msup><mover><mi>x</mi><mo>‾</mo></mover><mn>2</mn></msup><mi>SSX</mi></mfrac></math>. The squared version is the one consistent with <math alttext="the variance of beta hat sub 0"><mrow><mi>Var</mi><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>)</mo></mrow></math>; treat the unsquared form here as a slip of the pen.</p>
+</div>
+
+<h2 id="ci">Confidence intervals</h2>
+
+<p>The general shape of a confidence interval:</p>
+
+<div class="eq">
+<math display="block" alttext="estimate plus or minus statistic times the standard error of the estimate">
+  <mrow>
+    <mi>estimate</mi>
+    <mo>±</mo>
+    <mi>statistic</mi>
+    <mo>×</mo>
+    <mi>SE</mi><mo>(</mo><mi>estimate</mi><mo>)</mo>
+  </mrow>
+</math>
+</div>
+
+<p>where the <em>statistic</em> is the <strong>number of standard errors</strong> you reach out on either side. For the two coefficients:</p>
+
+<div class="eq">
+<math display="block" alttext="beta hat sub 1 plus or minus t star at one minus alpha over two with n minus 2 degrees of freedom, times sigma hat over the square root of S S X">
+  <mrow>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub>
+    <mo>±</mo>
+    <msubsup><mi>t</mi><mrow><mn>1</mn><mo>−</mo><mi>α</mi><mo>/</mo><mn>2</mn><mo>,</mo><mi>n</mi><mo>−</mo><mn>2</mn></mrow><mo>*</mo></msubsup>
+    <mfrac><mover><mi>σ</mi><mo>^</mo></mover><msqrt><mi>SSX</mi></msqrt></mfrac>
+  </mrow>
+</math>
+</div>
+
+<div class="eq">
+<math display="block" alttext="beta hat sub 0 plus or minus t star at one minus alpha over two with n minus 2 degrees of freedom, times sigma hat times the square root of the quantity one over n plus x bar squared over S S X">
+  <mrow>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub>
+    <mo>±</mo>
+    <msubsup><mi>t</mi><mrow><mn>1</mn><mo>−</mo><mi>α</mi><mo>/</mo><mn>2</mn><mo>,</mo><mi>n</mi><mo>−</mo><mn>2</mn></mrow><mo>*</mo></msubsup>
+    <mover><mi>σ</mi><mo>^</mo></mover>
+    <msqrt>
+      <mrow>
+        <mfrac><mn>1</mn><mi>n</mi></mfrac><mo>+</mo>
+        <mfrac><msup><mover><mi>x</mi><mo>‾</mo></mover><mn>2</mn></msup><mi>SSX</mi></mfrac>
+      </mrow>
+    </msqrt>
+  </mrow>
+</math>
+</div>
+
+<h2 id="why">Why the interval works</h2>
+
+<p>Start from the pivotal quantity — note that this uses the <strong>true</strong> <math alttext="beta sub 1"><msub><mi>β</mi><mn>1</mn></msub></math>, not a hypothesized value:</p>
+
+<div class="eq">
+<math display="block" alttext="beta hat sub 1 minus beta sub 1, over the estimated standard error of beta hat sub 1, distributed as t with n minus 2 degrees of freedom">
+  <mrow>
+    <mfrac>
+      <mrow><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>−</mo><msub><mi>β</mi><mn>1</mn></msub></mrow>
+      <mrow><mover><mi>SE</mi><mo>^</mo></mover><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>)</mo></mrow>
+    </mfrac>
+    <mo>∼</mo>
+    <msub><mi>t</mi><mrow><mi>n</mi><mo>−</mo><mn>2</mn></mrow></msub>
+  </mrow>
+</math>
+</div>
+
+<figure>
+<svg viewBox="0 0 560 300" role="img" aria-labelledby="fig13-t fig13-d" xmlns="http://www.w3.org/2000/svg">
+  <title id="fig13-t">The t distribution with both cutoffs labelled for a two-sided interval</title>
+  <desc id="fig13-d">A symmetric bell-shaped curve over a horizontal axis. Two vertical lines cut off equal tail areas, each labelled alpha over two, leaving one minus alpha in the middle. The left cutoff is labelled t star at alpha over two with n minus 2 degrees of freedom and the right cutoff t star at one minus alpha over two with n minus 2 degrees of freedom.</desc>
+  <line x1="40" y1="240" x2="520" y2="240" stroke="currentColor" stroke-width="2"/>
+  <polygon points="520,240 512,236 512,244" fill="currentColor"/>
+  <text x="524" y="245" font-size="16" fill="currentColor">t</text>
+  <path d="M55,238 C 150,232 200,72 280,70 C 360,72 410,232 505,238"
+        fill="none" stroke="currentColor" stroke-width="3"/>
+  <line x1="180" y1="240" x2="180" y2="196" stroke="currentColor" stroke-width="2"/>
+  <line x1="380" y1="240" x2="380" y2="196" stroke="currentColor" stroke-width="2"/>
+  <text x="280" y="160" font-size="18" fill="currentColor" text-anchor="middle">1 − α</text>
+  <line x1="120" y1="216" x2="150" y2="234" stroke="var(--pop)" stroke-width="1.5"/>
+  <text x="72" y="212" font-size="16" fill="var(--pop)">α/2</text>
+  <line x1="440" y1="216" x2="410" y2="234" stroke="var(--pop)" stroke-width="1.5"/>
+  <text x="446" y="212" font-size="16" fill="var(--pop)">α/2</text>
+  <line x1="180" y1="248" x2="180" y2="266" stroke="var(--est)" stroke-width="1.5"/>
+  <text x="180" y="284" font-size="15" fill="var(--est)" text-anchor="middle">t*(α/2, n−2)</text>
+  <line x1="380" y1="248" x2="380" y2="266" stroke="var(--est)" stroke-width="1.5"/>
+  <text x="380" y="284" font-size="15" fill="var(--est)" text-anchor="middle">t*(1−α/2, n−2)</text>
+</svg>
+<figcaption>Figure 13. The two cutoffs bracket <math alttext="one minus alpha"><mrow><mn>1</mn><mo>−</mo><mi>α</mi></mrow></math> of the <math alttext="t"><mi>t</mi></math> distribution — the statement we rearrange into an interval.</figcaption>
+</figure>
+<details>
+  <summary>Long description of Figure 13</summary>
+  <p>The same symmetric <math alttext="t"><mi>t</mi></math> density as before, but now both cutoffs are named on the axis: the left one <math alttext="t star at alpha over two, n minus 2"><msubsup><mi>t</mi><mrow><mi>α</mi><mo>/</mo><mn>2</mn><mo>,</mo><mi>n</mi><mo>−</mo><mn>2</mn></mrow><mo>*</mo></msubsup></math> and the right one <math alttext="t star at one minus alpha over two, n minus 2"><msubsup><mi>t</mi><mrow><mn>1</mn><mo>−</mo><mi>α</mi><mo>/</mo><mn>2</mn><mo>,</mo><mi>n</mi><mo>−</mo><mn>2</mn></mrow><mo>*</mo></msubsup></math>. Each tail beyond a cutoff holds area <math alttext="alpha over two"><mrow><mi>α</mi><mo>/</mo><mn>2</mn></mrow></math> and the region between them holds <math alttext="one minus alpha"><mrow><mn>1</mn><mo>−</mo><mi>α</mi></mrow></math>. Whereas Figure 12 used this picture to place a rejection boundary for a test, here the same picture is a probability statement about the pivotal quantity, which is then algebraically rearranged so that the unknown parameter — not the statistic — sits in the middle of the inequality.</p>
+</details>
+
+<p>By construction, the probability of landing between the two cutoffs is <math alttext="one minus alpha"><mrow><mn>1</mn><mo>−</mo><mi>α</mi></mrow></math>:</p>
+
+<div class="eq">
+<math display="block" alttext="the probability that t star at alpha over two n minus 2 is less than t which is less than t star at one minus alpha over two n minus 2, equals one minus alpha">
+  <mrow>
+    <mi>P</mi>
+    <mrow><mo>(</mo>
+      <msubsup><mi>t</mi><mrow><mi>α</mi><mo>/</mo><mn>2</mn><mo>,</mo><mi>n</mi><mo>−</mo><mn>2</mn></mrow><mo>*</mo></msubsup>
+      <mo>&lt;</mo><mi>t</mi><mo>&lt;</mo>
+      <msubsup><mi>t</mi><mrow><mn>1</mn><mo>−</mo><mi>α</mi><mo>/</mo><mn>2</mn><mo>,</mo><mi>n</mi><mo>−</mo><mn>2</mn></mrow><mo>*</mo></msubsup>
+    <mo>)</mo></mrow>
+    <mo>=</mo><mn>1</mn><mo>−</mo><mi>α</mi>
+  </mrow>
+</math>
+</div>
+
+<p>Substitute the pivotal quantity for <math alttext="t"><mi>t</mi></math>:</p>
+
+<div class="eq">
+<math display="block" alttext="the probability that t star at alpha over two n minus 2 is less than beta hat sub 1 minus beta sub 1 over the estimated standard error of beta hat sub 1, which is less than t star at one minus alpha over two n minus 2, equals one minus alpha">
+  <mrow>
+    <mi>P</mi>
+    <mrow><mo>(</mo>
+      <msubsup><mi>t</mi><mrow><mi>α</mi><mo>/</mo><mn>2</mn><mo>,</mo><mi>n</mi><mo>−</mo><mn>2</mn></mrow><mo>*</mo></msubsup>
+      <mo>&lt;</mo>
+      <mfrac>
+        <mrow><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>−</mo><msub><mi>β</mi><mn>1</mn></msub></mrow>
+        <mrow><mover><mi>SE</mi><mo>^</mo></mover><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>)</mo></mrow>
+      </mfrac>
+      <mo>&lt;</mo>
+      <msubsup><mi>t</mi><mrow><mn>1</mn><mo>−</mo><mi>α</mi><mo>/</mo><mn>2</mn><mo>,</mo><mi>n</mi><mo>−</mo><mn>2</mn></mrow><mo>*</mo></msubsup>
+    <mo>)</mo></mrow>
+    <mo>=</mo><mn>1</mn><mo>−</mo><mi>α</mi>
+  </mrow>
+</math>
+</div>
+
+<p>Rearranging so that <math alttext="beta sub 1"><msub><mi>β</mi><mn>1</mn></msub></math> sits alone in the middle:</p>
+
+<div class="eq">
+<math display="block" alttext="the probability that beta hat sub 1 plus t star at alpha over two n minus 2 times the estimated standard error of beta hat sub 1 is less than beta sub 1, which is less than beta hat sub 1 plus t star at one minus alpha over two n minus 2 times the estimated standard error of beta hat sub 1, equals one minus alpha">
+  <mrow>
+    <mi>P</mi>
+    <mrow><mo>(</mo>
+      <msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub>
+      <mo>+</mo>
+      <msubsup><mi>t</mi><mrow><mi>α</mi><mo>/</mo><mn>2</mn><mo>,</mo><mi>n</mi><mo>−</mo><mn>2</mn></mrow><mo>*</mo></msubsup>
+      <mover><mi>SE</mi><mo>^</mo></mover><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>)</mo>
+      <mo>&lt;</mo>
+      <msub><mi>β</mi><mn>1</mn></msub>
+      <mo>&lt;</mo>
+      <msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub>
+      <mo>+</mo>
+      <msubsup><mi>t</mi><mrow><mn>1</mn><mo>−</mo><mi>α</mi><mo>/</mo><mn>2</mn><mo>,</mo><mi>n</mi><mo>−</mo><mn>2</mn></mrow><mo>*</mo></msubsup>
+      <mover><mi>SE</mi><mo>^</mo></mover><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>)</mo>
+    <mo>)</mo></mrow>
+    <mo>=</mo><mn>1</mn><mo>−</mo><mi>α</mi>
+  </mrow>
+</math>
+</div>
+
+<div class="note">
+  <p><span class="tag" style="color:var(--pop)">Symmetry</span> The lower cutoff is just the negative of the upper one:</p>
+  <math display="block" alttext="t star at alpha over two n minus 2 equals negative t star at one minus alpha over two n minus 2">
+    <mrow>
+      <msubsup><mi>t</mi><mrow><mi>α</mi><mo>/</mo><mn>2</mn><mo>,</mo><mi>n</mi><mo>−</mo><mn>2</mn></mrow><mo>*</mo></msubsup>
+      <mo>=</mo><mo>−</mo>
+      <msubsup><mi>t</mi><mrow><mn>1</mn><mo>−</mo><mi>α</mi><mo>/</mo><mn>2</mn><mo>,</mo><mi>n</mi><mo>−</mo><mn>2</mn></mrow><mo>*</mo></msubsup>
+    </mrow>
+  </math>
+</div>
+
+<p>which turns the statement into the familiar symmetric form:</p>
+
+<div class="eq">
+<math display="block" alttext="the probability that beta hat sub 1 minus t star at one minus alpha over two n minus 2 times the estimated standard error of beta hat sub 1 is less than beta sub 1, which is less than beta hat sub 1 plus t star at one minus alpha over two n minus 2 times the estimated standard error of beta hat sub 1, equals one minus alpha">
+  <mrow>
+    <mi>P</mi>
+    <mrow><mo>(</mo>
+      <msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub>
+      <mo>−</mo>
+      <msubsup><mi>t</mi><mrow><mn>1</mn><mo>−</mo><mi>α</mi><mo>/</mo><mn>2</mn><mo>,</mo><mi>n</mi><mo>−</mo><mn>2</mn></mrow><mo>*</mo></msubsup>
+      <mover><mi>SE</mi><mo>^</mo></mover><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>)</mo>
+      <mo>&lt;</mo>
+      <msub><mi>β</mi><mn>1</mn></msub>
+      <mo>&lt;</mo>
+      <msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub>
+      <mo>+</mo>
+      <msubsup><mi>t</mi><mrow><mn>1</mn><mo>−</mo><mi>α</mi><mo>/</mo><mn>2</mn><mo>,</mo><mi>n</mi><mo>−</mo><mn>2</mn></mrow><mo>*</mo></msubsup>
+      <mover><mi>SE</mi><mo>^</mo></mover><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>)</mo>
+    <mo>)</mo></mrow>
+    <mo>=</mo><mn>1</mn><mo>−</mo><mi>α</mi>
+  </mrow>
+</math>
+</div>
+
+<div class="note">
+  <p><strong>This is the confidence interval form.</strong> The probability that the true <math alttext="beta sub 1"><msub><mi>β</mi><mn>1</mn></msub></math> is in the interval is <math alttext="one minus alpha"><mrow><mn>1</mn><mo>−</mo><mi>α</mi></mrow></math>.</p>
+</div>
+
+</main>
+
+<footer>
+  <p>Transcribed from the handwritten notes <em>LR_week_2_day_2.pdf</em> (12 pages). Equations are MathML; figures are inline SVG with title, description, and an expandable long description. Figure numbering continues from Week 2, Day 1. Conforms to WCAG 2.2 Level AA.</p>
+</footer>
+</div>
+</body>
+</html>
