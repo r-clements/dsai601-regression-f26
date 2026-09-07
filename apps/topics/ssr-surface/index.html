@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>SSR Surface — DSAI 601</title>
+  <title>SSE Surface — DSAI 601</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
@@ -75,10 +75,10 @@
   <a class="back" href="../../">&larr; All topics</a>
   <h1>The Sum of Squared Residuals as a Surface</h1>
   <p id="instructions" class="instructions">
-    For simple linear regression, the sum of squared residuals (SSR) is a function of the two
+    For simple linear regression, the sum of squared residuals (SSE) is a function of the two
     coefficients β₀ and β₁ — not just a single number. Use the sliders to choose a value of
     (β₀, β₁); the fitted line updates in the left panel, and a red dot marks where that choice
-    sits on the SSR surface (right, rotatable) and on the same surface viewed from above as a
+    sits on the SSE surface (right, rotatable) and on the same surface viewed from above as a
     contour map (far right). The blue ring marks the least-squares optimum — the bottom of the bowl.
   </p>
   <p id="a11y-instructions" class="instructions a11y-instructions">
@@ -109,13 +109,13 @@
       <div id="scatter-panel"></div>
     </div>
     <div class="panel-cell">
-      <h3>SSR(β₀, β₁) surface — drag to rotate</h3>
+      <h3>SSE(β₀, β₁) surface — drag to rotate</h3>
       <div id="bowl-panel"></div>
     </div>
   </div>
   <div class="row" style="grid-template-columns: 1fr;">
     <div class="panel-cell">
-      <h3>SSR(β₀, β₁) contour map (top-down view of the same surface)</h3>
+      <h3>SSE(β₀, β₁) contour map (top-down view of the same surface)</h3>
       <div id="contour-panel"></div>
     </div>
   </div>
@@ -123,10 +123,10 @@
   <div id="stats" aria-live="polite" aria-atomic="true">
     <span class="stat">β₀ = <span id="cur-b0" class="stat-value">–</span></span>
     <span class="stat">β₁ = <span id="cur-b1" class="stat-value">–</span></span>
-    <span class="stat">SSR = <span id="cur-ssr" class="stat-value">–</span></span>
+    <span class="stat">SSE = <span id="cur-sse" class="stat-value">–</span></span>
     <span class="stat">optimum: β₀ = <span id="opt-b0" class="stat-value">–</span></span>
     <span class="stat">β₁ = <span id="opt-b1" class="stat-value">–</span></span>
-    <span class="stat">min SSR = <span id="opt-ssr" class="stat-value">–</span></span>
+    <span class="stat">min SSE = <span id="opt-sse" class="stat-value">–</span></span>
   </div>
 
   <script src="app.js"></script>

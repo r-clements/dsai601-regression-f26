@@ -35,14 +35,14 @@ function fitOLS(points) {
   const slope = Sxx === 0 ? 0 : d3.sum(points, d => (d.x - meanX) * (d.y - meanY)) / Sxx;
   const intercept = meanY - slope * meanX;
   const resid = points.map(d => d.y - (intercept + slope * d.x));
-  const SSR = d3.sum(resid, r => r * r);
-  const s = Math.sqrt(SSR / Math.max(n - 2, 1));
+  const SSE = d3.sum(resid, r => r * r);
+  const s = Math.sqrt(SSE / Math.max(n - 2, 1));
   const seSlope = Sxx === 0 ? 1 : s / Math.sqrt(Sxx);
   const seIntercept = Sxx === 0 ? 1 : s * Math.sqrt(1 / n + meanX * meanX / Sxx);
-  return { n, slope, intercept, SSR, s, seSlope, seIntercept };
+  return { n, slope, intercept, SSE, s, seSlope, seIntercept };
 }
 
-function ssrAt(points, b0, b1) {
+function sseAt(points, b0, b1) {
   return d3.sum(points, d => (d.y - b0 - b1 * d.x) ** 2);
 }
 
@@ -118,7 +118,7 @@ function renderScatter() {
 
 const GRID_N = 50;
 let b0Min, b0Max, b1Min, b1Max;
-let grid, ssrMin, ssrMax;
+let grid, sseMin, sseMax;
 
 function rebuildGrid() {
   grid = new Float64Array(GRID_N * GRID_N);
@@ -127,13 +127,13 @@ function rebuildGrid() {
     const b1v = b1Min + (b1Max - b1Min) * row / (GRID_N - 1);
     for (let col = 0; col < GRID_N; col++) {
       const b0v = b0Min + (b0Max - b0Min) * col / (GRID_N - 1);
-      const v = ssrAt(points, b0v, b1v);
+      const v = sseAt(points, b0v, b1v);
       grid[row * GRID_N + col] = v;
       if (v < mn) mn = v;
       if (v > mx) mx = v;
     }
   }
-  ssrMin = mn; ssrMax = mx;
+  sseMin = mn; sseMax = mx;
 }
 
 function gridB0(col) { return b0Min + (b0Max - b0Min) * col / (GRID_N - 1); }
@@ -182,7 +182,7 @@ function renderContourSurface() {
   addAxisLabels(contourSvg, contourWidth, contourHeight, "β₀", "β₁");
 
   // Contour bands are computed on a sqrt-transformed copy of the grid so that
-  // rings are evenly spaced (SSR grows quadratically, so raw thresholds would
+  // rings are evenly spaced (SSE grows quadratically, so raw thresholds would
   // bunch almost all of the visible detail into one huge outer band).
   const transformed = Float64Array.from(grid, v => Math.sqrt(Math.max(v, 0)));
   const contourGen = d3.contours().size([GRID_N, GRID_N]).thresholds(14);
@@ -235,12 +235,12 @@ const bowlAxisLayer = bowlSvg.append("g");
 const bowlSurfaceLayer = bowlSvg.append("g");
 const bowlMarkerLayer = bowlSvg.append("g");
 
-function toBowlCube(b0, b1, ssr) {
-  const ssrMid = (ssrMin + ssrMax) / 2;
-  const ssrHalf = (ssrMax - ssrMin) / 2 || 1;
+function toBowlCube(b0, b1, sse) {
+  const sseMid = (sseMin + sseMax) / 2;
+  const sseHalf = (sseMax - sseMin) / 2 || 1;
   return {
     u: (b0 - (b0Min + b0Max) / 2) / ((b0Max - b0Min) / 2),
-    v: (ssr - ssrMid) / ssrHalf,
+    v: (sse - sseMid) / sseHalf,
     w: (b1 - (b1Min + b1Max) / 2) / ((b1Max - b1Min) / 2)
   };
 }
@@ -259,9 +259,9 @@ function projectBowl(cube) {
 function renderBowlAxes() {
   const b0Mid = (b0Min + b0Max) / 2, b1Mid = (b1Min + b1Max) / 2;
   const lines = [
-    { from: toBowlCube(b0Min, b1Mid, ssrMin), to: toBowlCube(b0Max, b1Mid, ssrMin), label: "β₀" },
-    { from: toBowlCube(b0Mid, b1Mid, ssrMin), to: toBowlCube(b0Mid, b1Mid, ssrMax), label: "SSR" },
-    { from: toBowlCube(b0Mid, b1Min, ssrMin), to: toBowlCube(b0Mid, b1Max, ssrMin), label: "β₁" }
+    { from: toBowlCube(b0Min, b1Mid, sseMin), to: toBowlCube(b0Max, b1Mid, sseMin), label: "β₀" },
+    { from: toBowlCube(b0Mid, b1Mid, sseMin), to: toBowlCube(b0Mid, b1Mid, sseMax), label: "SSE" },
+    { from: toBowlCube(b0Mid, b1Min, sseMin), to: toBowlCube(b0Mid, b1Max, sseMin), label: "β₁" }
   ].map(d => ({ p1: projectBowl(d.from), p2: projectBowl(d.to), label: d.label }));
 
   bowlAxisLayer.selectAll("line").data(lines).join("line")
@@ -300,9 +300,9 @@ function renderBowlSurface() {
 }
 
 function renderBowlMarkers() {
-  const curSsr = ssrAt(points, curB0, curB1);
-  const curProj = projectBowl(toBowlCube(curB0, curB1, curSsr));
-  const optProj = projectBowl(toBowlCube(fit.intercept, fit.slope, fit.SSR));
+  const curSse = sseAt(points, curB0, curB1);
+  const curProj = projectBowl(toBowlCube(curB0, curB1, curSse));
+  const optProj = projectBowl(toBowlCube(fit.intercept, fit.slope, fit.SSE));
 
   bowlMarkerLayer.selectAll("circle.optimum-marker").data([optProj]).join("circle")
     .attr("class", "optimum-marker")
@@ -351,13 +351,13 @@ function render() {
   renderContourMarkers();
   renderBowlMarkers();
 
-  const curSsr = ssrAt(points, curB0, curB1);
+  const curSse = sseAt(points, curB0, curB1);
   document.getElementById("cur-b0").textContent = curB0.toFixed(2);
   document.getElementById("cur-b1").textContent = curB1.toFixed(2);
-  document.getElementById("cur-ssr").textContent = curSsr.toFixed(2);
+  document.getElementById("cur-sse").textContent = curSse.toFixed(2);
   document.getElementById("opt-b0").textContent = fit.intercept.toFixed(2);
   document.getElementById("opt-b1").textContent = fit.slope.toFixed(2);
-  document.getElementById("opt-ssr").textContent = fit.SSR.toFixed(2);
+  document.getElementById("opt-sse").textContent = fit.SSE.toFixed(2);
 }
 
 function regenerate() {

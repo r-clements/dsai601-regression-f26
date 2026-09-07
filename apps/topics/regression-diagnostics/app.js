@@ -13,6 +13,10 @@ function randSkewed() {
   return -Math.log(1 - u) - 1;
 }
 
+function normalPDF(x, mu, sigma) {
+  return Math.exp(-0.5 * ((x - mu) / sigma) ** 2) / (sigma * Math.sqrt(2 * Math.PI));
+}
+
 // Inverse standard normal CDF (Acklam's approximation)
 function qnorm(p) {
   if (p <= 0) return -Infinity;
@@ -48,18 +52,30 @@ function qnorm(p) {
 let nextId = 0;
 
 function generateData(n) {
-  const heteroscedastic = document.getElementById("heteroscedastic").checked;
-  const nonlinear = document.getElementById("nonlinear").checked;
-  const skewed = document.getElementById("skewed").checked;
+  const heteroSeverity = parseFloat(document.getElementById("hetero-severity").value);
+  const nonlinearSeverity = parseFloat(document.getElementById("nonlinear-severity").value);
+  const skewSeverity = parseFloat(document.getElementById("skew-severity").value);
+
+  const baseSigma = 1.3;
+  const EX2_CENTERED = 8.3333; // E[(x-5)^2] for x ~ Uniform(0,10), keeps the curvature term from shifting the mean
 
   const pts = [];
   for (let i = 0; i < n; i++) {
     const x = Math.random() * 10;
     let trueY = 2 + 1.3 * x;
-    if (nonlinear) trueY += 0.35 * (x - 5) * (x - 5) - 3;
-    const sigma = heteroscedastic ? (0.4 + 0.3 * x) : 1.3;
-    const noise = (skewed ? randSkewed() : randNormal()) * sigma;
-    pts.push({ id: nextId++, x, y: trueY + noise });
+    trueY += nonlinearSeverity * ((x - 5) * (x - 5) - EX2_CENTERED);
+
+    // Sigma fans out (or in) linearly across the x-range; severity=0 keeps it constant.
+    const sigma = baseSigma * (1 + heteroSeverity * (x - 5) / 5);
+
+    // Blend standard-normal and standardized-skewed noise, holding variance fixed at 1.
+    // Weighting by sqrt(1-w)/sqrt(w) (rather than sqrt(1-w^2)/w) makes the resulting
+    // skewness scale roughly as w^1.5 instead of w^3, so moderate slider values are
+    // actually noticeable instead of being suppressed until close to the max.
+    const w = skewSeverity;
+    const noiseStd = Math.sqrt(1 - w) * randNormal() + Math.sqrt(w) * randSkewed();
+
+    pts.push({ id: nextId++, x, y: trueY + noiseStd * sigma });
   }
   return pts;
 }
@@ -73,23 +89,23 @@ function computeFit(points) {
 
   const meanX = d3.mean(points, d => d.x);
   const meanY = d3.mean(points, d => d.y);
-  const Sxx = d3.sum(points, d => (d.x - meanX) ** 2);
-  if (Sxx === 0) return null;
+  const SSX = d3.sum(points, d => (d.x - meanX) ** 2);
+  if (SSX === 0) return null;
 
-  const slope = d3.sum(points, d => (d.x - meanX) * (d.y - meanY)) / Sxx;
+  const slope = d3.sum(points, d => (d.x - meanX) * (d.y - meanY)) / SSX;
   const intercept = meanY - slope * meanX;
   const fitted = points.map(d => intercept + slope * d.x);
   const resid = points.map((d, i) => d.y - fitted[i]);
-  const SSR = d3.sum(resid, r => r * r);
-  const s = Math.sqrt(SSR / (n - p));
-  const leverage = points.map(d => 1 / n + (d.x - meanX) ** 2 / Sxx);
+  const SSE = d3.sum(resid, r => r * r);
+  const sigmaHat = Math.sqrt(SSE / (n - p));
+  const leverage = points.map(d => 1 / n + (d.x - meanX) ** 2 / SSX);
   const stdResid = resid.map((r, i) => {
-    const denom = s * Math.sqrt(Math.max(1 - leverage[i], 1e-6));
+    const denom = sigmaHat * Math.sqrt(Math.max(1 - leverage[i], 1e-6));
     return denom === 0 ? 0 : r / denom;
   });
   const cooksD = stdResid.map((r, i) => (r * r / p) * (leverage[i] / Math.max(1 - leverage[i], 1e-6)));
 
-  return { n, p, slope, intercept, fitted, resid, leverage, stdResid, cooksD, s };
+  return { n, p, slope, intercept, fitted, resid, leverage, stdResid, cooksD, sigmaHat };
 }
 
 // ---------- main scatter panel ----------
@@ -232,7 +248,7 @@ function renderScatterPanel(panel, data, xAcc, yAcc) {
 
 const residFittedPanel = setupPanel("#resid-fitted", "Residuals versus fitted values, with a dashed reference line at zero. A curved or funnel-shaped pattern indicates nonlinearity or non-constant variance.");
 const qqPanel = setupPanel("#qq-plot", "Normal quantile-quantile plot of standardized residuals against theoretical normal quantiles, with a dashed diagonal reference line. Points that stray from the diagonal indicate departure from normality.");
-const scaleLocationPanel = setupPanel("#scale-location", "Square root of absolute standardized residuals versus fitted values. An increasing trend indicates non-constant variance.");
+const residHistPanel = setupPanel("#resid-histogram", "Histogram of standardized residuals with the theoretical standard normal density overlaid in red. A shape that departs from this curve indicates non-normal errors.");
 const residLeveragePanel = setupPanel("#resid-leverage", "Standardized residuals versus leverage, with dashed Cook's distance contours at 0.5 and 1. Points near or beyond the outer contour are highly influential.");
 
 function renderResidFitted(points) {
@@ -262,10 +278,40 @@ function renderQQ(points) {
   addAxisLabels(qqPanel.svg, qqPanel.width, qqPanel.height, "Theoretical quantiles", "Standardized residuals");
 }
 
-function renderScaleLocation(points) {
-  renderScatterPanel(scaleLocationPanel, points, d => d.fitted, d => d.sqrtAbsStdResid);
-  addAxisLabels(scaleLocationPanel.svg, scaleLocationPanel.width, scaleLocationPanel.height,
-    "Fitted values", "√|Standardized residuals|");
+function renderResidHistogram(points) {
+  const values = points.map(d => d.stdResid);
+  const [dmin, dmax] = d3.extent(values);
+  const pad = (dmax - dmin) * 0.1 || 1;
+  const domain = [dmin - pad, dmax + pad];
+  residHistPanel.x.domain(domain);
+
+  const bins = d3.bin().domain(domain).thresholds(20)(values);
+  const density = bins.map(b => ({ x0: b.x0, x1: b.x1, d: b.length / (values.length * (b.x1 - b.x0)) }));
+
+  const curve = d3.range(80).map(i => {
+    const x = domain[0] + (domain[1] - domain[0]) * i / 79;
+    return { x, y: normalPDF(x, 0, 1) };
+  });
+
+  const maxY = Math.max(d3.max(density, d => d.d), d3.max(curve, d => d.y)) * 1.1;
+  residHistPanel.y.domain([0, maxY]);
+
+  residHistPanel.xAxisG.call(d3.axisBottom(residHistPanel.x).ticks(6));
+  residHistPanel.yAxisG.call(d3.axisLeft(residHistPanel.y).ticks(5));
+
+  residHistPanel.decorLayer.selectAll("rect.hist-bar").data(density).join("rect")
+    .attr("class", "hist-bar")
+    .attr("x", d => residHistPanel.x(d.x0) + 1)
+    .attr("width", d => Math.max(0, residHistPanel.x(d.x1) - residHistPanel.x(d.x0) - 1))
+    .attr("y", d => residHistPanel.y(d.d))
+    .attr("height", d => residHistPanel.y(0) - residHistPanel.y(d.d));
+
+  const lineGen = d3.line().x(d => residHistPanel.x(d.x)).y(d => residHistPanel.y(d.y));
+  residHistPanel.pointLayer.selectAll("path.theory-curve").data([curve]).join("path")
+    .attr("class", "theory-curve")
+    .attr("d", lineGen);
+
+  addAxisLabels(residHistPanel.svg, residHistPanel.width, residHistPanel.height, "Standardized residuals", "density");
 }
 
 function renderResidLeverage(points) {
@@ -316,7 +362,6 @@ function update() {
       d.leverage = fit.leverage[i];
       d.stdResid = fit.stdResid[i];
       d.cooksD = fit.cooksD[i];
-      d.sqrtAbsStdResid = Math.sqrt(Math.abs(d.stdResid));
       d.notable = d.cooksD > 4 / fit.n;
     });
   } else {
@@ -332,7 +377,7 @@ function update() {
   if (fit) {
     renderResidFitted(points);
     renderQQ(points);
-    renderScaleLocation(points);
+    renderResidHistogram(points);
     renderResidLeverage(points);
   }
 
@@ -344,14 +389,23 @@ function update() {
 }
 
 function regenerate() {
-  points = generateData(40);
+  points = generateData(120);
   setMainDomain(points);
   update();
 }
 
 document.getElementById("regenerate").addEventListener("click", regenerate);
-document.getElementById("heteroscedastic").addEventListener("change", regenerate);
-document.getElementById("nonlinear").addEventListener("change", regenerate);
-document.getElementById("skewed").addEventListener("change", regenerate);
+
+function wireSeveritySlider(sliderId, readoutId) {
+  const slider = document.getElementById(sliderId);
+  const readout = document.getElementById(readoutId);
+  slider.addEventListener("input", () => {
+    readout.textContent = parseFloat(slider.value).toFixed(2);
+    regenerate();
+  });
+}
+wireSeveritySlider("hetero-severity", "hetero-readout");
+wireSeveritySlider("nonlinear-severity", "nonlinear-readout");
+wireSeveritySlider("skew-severity", "skew-readout");
 
 regenerate();

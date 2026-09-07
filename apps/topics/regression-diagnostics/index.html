@@ -42,10 +42,30 @@
       font-size: 0.9rem;
       cursor: pointer;
     }
+    .controls input[type="range"] { width: 130px; cursor: pointer; }
+    .controls output { font-weight: 600; min-width: 2.2rem; display: inline-block; }
 
     #main-panel { border: 1px solid #ddd; border-radius: 4px; }
     #stats { font-size: 0.95rem; margin: 0.6rem 0 1.25rem; }
     #stats span { font-weight: 600; }
+
+    .formulas {
+      background: #f7f7f8;
+      border-radius: 6px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1.25rem;
+      font-size: 0.9rem;
+      color: #333;
+    }
+    .formulas summary { cursor: pointer; font-weight: 600; color: #1a5fb4; }
+    .formulas p { margin: 0.6rem 0; }
+    .formulas p.formula {
+      font-size: 1rem;
+      text-align: center;
+      margin: 0.5rem 0 0.9rem;
+    }
+    .sqrt { white-space: nowrap; }
+    .sqrt-content { border-top: 1.5px solid #333; padding: 0 0.2em; margin-left: 0.05em; }
 
     .grid {
       display: grid;
@@ -73,6 +93,8 @@
     .qq-diag { stroke: #999; stroke-dasharray: 4 3; }
     .diag-point { fill: #1a5fb4; }
     .diag-point.notable { fill: #c01c28; stroke: #222; stroke-width: 1.2px; }
+    .hist-bar { fill: #1a5fb4; opacity: 0.75; }
+    .theory-curve { stroke: #c01c28; stroke-width: 2; fill: none; }
     .axis-label { font-size: 0.75rem; fill: #555; }
   </style>
 </head>
@@ -86,17 +108,53 @@
     Points turn <span class="legend-swatch"></span><strong>red</strong> when their Cook's distance
     exceeds 4/n, a common rule-of-thumb threshold for flagging unusually influential observations —
     the same points are flagged in the stats line and stand out on the Residuals vs. Leverage plot.
+    Each violation below is a severity slider rather than an on/off toggle, since real data is
+    rarely a clean-cut case — turn one up gradually and watch the corresponding diagnostic plot
+    develop the pattern it's meant to detect.
   </p>
 
   <div class="controls">
     <button id="regenerate">New simulated data</button>
-    <label><input type="checkbox" id="heteroscedastic"> Heteroscedastic errors</label>
-    <label><input type="checkbox" id="nonlinear"> Nonlinear relationship</label>
-    <label><input type="checkbox" id="skewed"> Skewed errors</label>
+    <label>Heteroscedasticity
+      <input type="range" id="hetero-severity" min="0" max="0.9" step="0.05" value="0">
+      <output id="hetero-readout" for="hetero-severity">0.00</output>
+    </label>
+    <label>Nonlinearity
+      <input type="range" id="nonlinear-severity" min="0" max="1" step="0.05" value="0">
+      <output id="nonlinear-readout" for="nonlinear-severity">0.00</output>
+    </label>
+    <label>Skewness
+      <input type="range" id="skew-severity" min="0" max="1" step="0.05" value="0">
+      <output id="skew-readout" for="skew-severity">0.00</output>
+    </label>
   </div>
 
   <div id="main-panel"></div>
   <div id="stats" aria-live="polite" aria-atomic="true">n = <span id="n">0</span> &nbsp;|&nbsp; slope = <span id="slope">–</span> &nbsp;|&nbsp; intercept = <span id="intercept">–</span> &nbsp;|&nbsp; flagged points (Cook's D &gt; 4/n) = <span id="flagged">0</span></div>
+
+  <details class="formulas">
+    <summary>How standardized residuals, leverage, and Cook's distance are calculated</summary>
+    <p>
+      For the n points currently on the plot, let eᵢ = yᵢ − ŷᵢ be the raw residual for point i,
+      and let σ̂ = <span class="sqrt">√<span class="sqrt-content">SSE / (n − 2)</span></span>
+      be the residual standard error, where SSE = Σᵢeᵢ².
+    </p>
+    <p>
+      <strong>Leverage</strong> hᵢ measures how far xᵢ sits from the center of the x's, where
+      SSX = Σⱼ(xⱼ − x̄)²:
+    </p>
+    <p class="formula">hᵢ = 1/n &nbsp;+&nbsp; (xᵢ − x̄)² / SSX</p>
+    <p>
+      <strong>Standardized residual</strong> rᵢ rescales eᵢ by its own estimated standard deviation,
+      which shrinks as leverage grows:
+    </p>
+    <p class="formula">rᵢ = eᵢ / (σ̂·<span class="sqrt">√<span class="sqrt-content">1 − hᵢ</span></span>)</p>
+    <p>
+      <strong>Cook's distance</strong> Dᵢ combines the standardized residual and leverage into a
+      single influence measure (p = 2 parameters: intercept and slope):
+    </p>
+    <p class="formula">Dᵢ = (rᵢ² / p) · (hᵢ / (1 − hᵢ))</p>
+  </details>
 
   <div class="grid">
     <div class="cell">
@@ -108,8 +166,8 @@
       <div id="qq-plot"></div>
     </div>
     <div class="cell">
-      <h3>Scale-Location</h3>
-      <div id="scale-location"></div>
+      <h3>Histogram of Standardized Residuals</h3>
+      <div id="resid-histogram"></div>
     </div>
     <div class="cell">
       <h3>Residuals vs. Leverage (Cook's distance)</h3>
