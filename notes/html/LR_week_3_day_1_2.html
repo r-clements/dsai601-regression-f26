@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Intervals, the Sum of Squares Decomposition, and the F-test — Week 3, Days 1–2 | DSAI 601</title>
+<meta name="description" content="Accessible class notes on confidence intervals for the coefficients and the mean response, prediction intervals, the decomposition of the total sum of squares into regression and error components, the F-test for the slope, and the coefficient of determination.">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --muted: #4a4a4a;
+    --rule: #c9c9c9;
+    --accent: #0b4f8a;
+    --accent-bg: #eef4fa;
+    --focus: #0b4f8a;
+    --pop: #a4262c;   /* population / true  — 5.9:1 on white */
+    --est: #5b2d8e;   /* estimate / fitted  — 8.5:1 on white */
+    --err: #8a5000;   /* errors / residuals — 5.1:1 on white */
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #f2f2f2; --muted: #cfcfcf; --rule: #555;
+      --accent: #8ab8e0; --accent-bg: #182430; --focus: #8ab8e0;
+      --pop: #ff9f99; --est: #cbb0ff; --err: #f0b458;
+    }
+    body { background: #131313; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 1.0625rem;
+    line-height: 1.65;
+    color: var(--ink);
+    background: #fff;
+  }
+  @media (prefers-color-scheme: dark) { body { background: #131313; } }
+  .wrap { max-width: 46rem; margin: 0 auto; padding: 1.5rem 1.25rem 5rem; }
+  a { color: var(--accent); }
+  a:focus-visible, summary:focus-visible, :focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+  .skip {
+    position: absolute; left: -9999px; top: 0;
+    background: var(--accent); color: #fff;
+    padding: .75rem 1rem; z-index: 10; text-decoration: none;
+  }
+  .skip:focus { left: .5rem; top: .5rem; }
+  h1 { font-size: 1.85rem; line-height: 1.25; margin: 0 0 .25rem; }
+  h2 { font-size: 1.35rem; line-height: 1.3; margin: 2.5rem 0 .5rem;
+       padding-top: .75rem; border-top: 2px solid var(--rule); }
+  h3 { font-size: 1.1rem; margin: 1.75rem 0 .4rem; }
+  p, li { max-width: 42rem; }
+  .lede { color: var(--muted); margin-top: 0; }
+  nav.toc {
+    background: var(--accent-bg); border: 1px solid var(--rule);
+    border-radius: 8px; padding: 1rem 1.25rem; margin: 2rem 0;
+  }
+  nav.toc h2 { font-size: 1.05rem; margin: 0 0 .5rem; border: 0; padding: 0; }
+  nav.toc ol { margin: 0; padding-left: 1.25rem; }
+  nav.toc li { margin: .3rem 0; }
+  nav.toc a { display: inline-block; min-height: 24px; padding: 2px 0; }
+  table { border-collapse: collapse; margin: 1rem 0; width: 100%; }
+  caption { text-align: left; font-weight: 600; padding-bottom: .5rem; }
+  th, td { border: 1px solid var(--rule); padding: .5rem .7rem; text-align: left; }
+  thead th { background: var(--accent-bg); }
+  figure { margin: 1.5rem 0; }
+  figcaption { font-size: .95rem; color: var(--muted); margin-top: .5rem; }
+  svg { max-width: 100%; height: auto; display: block; }
+  details {
+    border: 1px solid var(--rule); border-radius: 6px;
+    padding: .5rem .85rem; margin: .75rem 0; background: var(--accent-bg);
+  }
+  summary { cursor: pointer; font-weight: 600; min-height: 24px; padding: .25rem 0; }
+  details[open] summary { margin-bottom: .5rem; }
+  math { font-size: 1.15em; }
+  math[display="block"] { margin: 1rem 0; overflow-x: auto; overflow-y: hidden; }
+  .eq { margin: 1.25rem 0; }
+  .note {
+    border-left: 4px solid var(--accent); background: var(--accent-bg);
+    padding: .75rem 1rem; margin: 1.25rem 0; border-radius: 0 6px 6px 0;
+  }
+  .note > :first-child { margin-top: 0; }
+  .note > :last-child { margin-bottom: 0; }
+  .tag {
+    display: inline-block; font-size: .8rem; font-weight: 700;
+    letter-spacing: .02em; text-transform: uppercase;
+    border: 1px solid currentColor; border-radius: 4px;
+    padding: 0 .4em; white-space: nowrap;
+  }
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 2px solid var(--rule);
+           color: var(--muted); font-size: .95rem; }
+  ol.steps { padding-left: 1.4rem; }
+  ol.steps > li { margin: .75rem 0; }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+
+<div class="wrap">
+<header>
+  <p class="lede"><strong>DSAI 601 — Regression</strong> · Fall 2026 · Week 3, Days 1–2</p>
+  <h1>Intervals, the Sum of Squares Decomposition, and the F-test</h1>
+  <p class="lede">Accessible transcription of the handwritten class notes. All equations are marked up in MathML so they can be read by a screen reader, magnified, or rendered in braille. All figures have text descriptions. Annotations written in a second pen colour in the original are reproduced here as labelled callouts and table columns, so none of their meaning depends on colour.</p>
+</header>
+
+<nav class="toc" aria-labelledby="toc-h">
+  <h2 id="toc-h">On this page</h2>
+  <ol>
+    <li><a href="#recap">I. Recap: tests and intervals for the coefficients</a></li>
+    <li><a href="#ci-test">Reading a confidence interval as a test</a></li>
+    <li><a href="#ci-mean">II. Confidence interval for the mean response</a></li>
+    <li><a href="#pi">Prediction interval for a new observation</a></li>
+    <li><a href="#ssd">III. Sum of squares decomposition</a></li>
+    <li><a href="#extremes">Two extreme cases</a></li>
+    <li><a href="#ftest">IV. The F-test</a></li>
+    <li><a href="#fdist">The F distribution</a></li>
+    <li><a href="#decision">Decision rule</a></li>
+    <li><a href="#r2">V. Coefficient of determination</a></li>
+    <li><a href="#rho">R-squared and the correlation coefficient</a></li>
+  </ol>
+</nav>
+
+<main id="main">
+
+<h2 id="recap">I. Recap: tests and intervals for the coefficients</h2>
+
+<p>Hypothesis testing and confidence intervals for <math alttext="beta sub 0"><msub><mi>β</mi><mn>0</mn></msub></math> and <math alttext="beta sub 1"><msub><mi>β</mi><mn>1</mn></msub></math>.</p>
+
+<h3>Hypothesis tests</h3>
+
+<div class="eq">
+<math display="block" alttext="if the p-value is less than alpha, then reject H naught">
+  <mrow>
+    <mi>p</mi><mtext>-value</mtext>
+    <mo>&lt;</mo><mi>α</mi>
+    <mo stretchy="false">⟹</mo>
+    <mtext>reject&#160;</mtext><msub><mi>H</mi><mn>0</mn></msub>
+  </mrow>
+</math>
+</div>
+
+<p>In most cases the null hypothesis is</p>
+
+<div class="eq">
+<math display="block" alttext="H naught: beta sub 0 equals zero, and beta sub 1 equals zero">
+  <mrow>
+    <msub><mi>H</mi><mn>0</mn></msub><mo>:</mo>
+    <mrow>
+      <mo>{</mo>
+      <mtable columnalign="left">
+        <mtr><mtd><mrow><msub><mi>β</mi><mn>0</mn></msub><mo>=</mo><mn>0</mn></mrow></mtd></mtr>
+        <mtr><mtd><mrow><msub><mi>β</mi><mn>1</mn></msub><mo>=</mo><mn>0</mn></mrow></mtd></mtr>
+      </mtable>
+    </mrow>
+  </mrow>
+</math>
+</div>
+
+<p>If we reject <math alttext="H naught"><msub><mi>H</mi><mn>0</mn></msub></math>, then <em>X</em> is a <strong>significant predictor</strong> for <em>y</em>.</p>
+
+<h3>Confidence interval for the slope</h3>
+
+<div class="eq">
+<math display="block" alttext="beta hat sub 1 plus or minus t star at one minus alpha over two with n minus 2 degrees of freedom, times sigma hat over the square root of S S X, equals open paren lower comma upper close paren">
+  <mrow>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub>
+    <mo>±</mo>
+    <msub><mi>t</mi><mrow><mn>1</mn><mo>−</mo><mi>α</mi><mo>/</mo><mn>2</mn><mo>,</mo><mi>n</mi><mo>−</mo><mn>2</mn></mrow></msub>
+    <mfrac><mover><mi>σ</mi><mo>^</mo></mover><msqrt><mi>SSX</mi></msqrt></mfrac>
+    <mo>=</mo>
+    <mrow><mo>(</mo><mtext>lower</mtext><mo>,</mo><mtext>upper</mtext><mo>)</mo></mrow>
+  </mrow>
+</math>
+</div>
+
+<figure>
+<svg viewBox="0 0 560 280" role="img" aria-labelledby="fig14-t fig14-d" xmlns="http://www.w3.org/2000/svg">
+  <title id="fig14-t">The t distribution with the upper tail area alpha over two marked</title>
+  <desc id="fig14-d">A symmetric bell-shaped curve over a horizontal axis with zero at the centre. A vertical line to the right of centre cuts off a small tail, labelled alpha over two. An arrow points up at the position of that cutoff, which is the multiplier used in the confidence interval.</desc>
+  <line x1="60" y1="220" x2="500" y2="220" stroke="currentColor" stroke-width="2"/>
+  <path d="M80,218 C 160,212 205,70 280,68 C 355,70 400,212 480,218"
+        fill="none" stroke="currentColor" stroke-width="3"/>
+  <line x1="280" y1="214" x2="280" y2="226" stroke="currentColor" stroke-width="2"/>
+  <text x="280" y="246" font-size="16" fill="currentColor" text-anchor="middle">0</text>
+  <line x1="392" y1="220" x2="392" y2="182" stroke="currentColor" stroke-width="2"/>
+  <line x1="446" y1="180" x2="415" y2="200" stroke="var(--pop)" stroke-width="1.5"/>
+  <text x="452" y="176" font-size="16" fill="var(--pop)">α/2</text>
+  <line x1="392" y1="262" x2="392" y2="234" stroke="var(--est)" stroke-width="2"/>
+  <polygon points="392,230 387,241 397,241" fill="var(--est)"/>
+  <text x="392" y="278" font-size="14" fill="var(--est)" text-anchor="middle">t*(1−α/2, n−2)</text>
+</svg>
+<figcaption>Figure 14. The multiplier in the interval is the <math alttext="t"><mi>t</mi></math> value cutting off <math alttext="alpha over two"><mrow><mi>α</mi><mo>/</mo><mn>2</mn></mrow></math> in the upper tail.</figcaption>
+</figure>
+<details>
+  <summary>Long description of Figure 14</summary>
+  <p>A symmetric <math alttext="t"><mi>t</mi></math> density is drawn over a horizontal axis whose centre is marked <math alttext="zero"><mn>0</mn></math>. A short vertical line stands to the right of centre where the curve has already dropped close to the axis; the region beyond it is labelled <math alttext="alpha over two"><mrow><mi>α</mi><mo>/</mo><mn>2</mn></mrow></math> by a leader line. A second arrow points upward at that same position from below the axis, labelling it <math alttext="t star at one minus alpha over two, n minus 2"><msub><mi>t</mi><mrow><mn>1</mn><mo>−</mo><mi>α</mi><mo>/</mo><mn>2</mn><mo>,</mo><mi>n</mi><mo>−</mo><mn>2</mn></mrow></msub></math>. The figure is here to identify one number: the multiplier that turns a standard error into the half-width of the confidence interval.</p>
+</details>
+
+<h2 id="ci-test">Reading a confidence interval as a test</h2>
+
+<p>The interval and the test carry the same information. Ask where <math alttext="zero"><mn>0</mn></math> falls relative to the interval <math alttext="open paren L comma U close paren"><mrow><mo>(</mo><mi>L</mi><mo>,</mo><mi>U</mi><mo>)</mo></mrow></math>:</p>
+
+<table>
+  <caption>Using a confidence interval to decide the test</caption>
+  <thead>
+    <tr>
+      <th scope="col">Where is <math alttext="zero"><mn>0</mn></math>?</th>
+      <th scope="col">Decision</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row"><math alttext="zero is in the interval L to U"><mrow><mn>0</mn><mo>∈</mo><mo>(</mo><mi>L</mi><mo>,</mo><mi>U</mi><mo>)</mo></mrow></math></th>
+      <td><strong>Fail to reject</strong> <math alttext="H naught"><msub><mi>H</mi><mn>0</mn></msub></math></td>
+    </tr>
+    <tr>
+      <th scope="row"><math alttext="zero is not in the interval L to U"><mrow><mn>0</mn><mo>∉</mo><mo>(</mo><mi>L</mi><mo>,</mo><mi>U</mi><mo>)</mo></mrow></math></th>
+      <td><strong>Reject</strong> <math alttext="H naught"><msub><mi>H</mi><mn>0</mn></msub></math></td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="ci-mean">II. Confidence interval for the mean response</h2>
+
+<p>An interval such that the <strong>true mean of <em>y</em></strong>, for <math alttext="X equals x sub 0"><mrow><mi>X</mi><mo>=</mo><msub><mi>x</mi><mn>0</mn></msub></mrow></math>, is in the interval with <math alttext="open paren one minus alpha close paren times one hundred percent"><mrow><mo>(</mo><mn>1</mn><mo>−</mo><mi>α</mi><mo>)</mo><mn>100</mn><mo>%</mo></mrow></math> confidence.</p>
+
+<figure>
+<svg viewBox="0 0 560 300" role="img" aria-labelledby="fig15-t fig15-d" xmlns="http://www.w3.org/2000/svg">
+  <title id="fig15-t">Confidence interval for the mean response at one value of the predictor</title>
+  <desc id="fig15-d">A scatterplot with a fitted line rising to the right. At one marked value on the horizontal axis, labelled x sub 0, a short vertical bar with end caps straddles the fitted line, showing the confidence interval for the mean response at that predictor value.</desc>
+  <line x1="60" y1="250" x2="510" y2="250" stroke="currentColor" stroke-width="2"/>
+  <line x1="60" y1="250" x2="60" y2="30" stroke="currentColor" stroke-width="2"/>
+  <polygon points="510,250 502,246 502,254" fill="currentColor"/>
+  <polygon points="60,30 56,38 64,38" fill="currentColor"/>
+  <text x="515" y="255" font-size="15" fill="currentColor">x</text>
+  <text x="42" y="28" font-size="15" fill="currentColor">y</text>
+  <line x1="85" y1="215" x2="470" y2="70" stroke="var(--accent)" stroke-width="3"/>
+  <g fill="currentColor">
+    <circle cx="120" cy="188" r="3.5"/><circle cx="160" cy="205" r="3.5"/>
+    <circle cx="205" cy="160" r="3.5"/><circle cx="250" cy="175" r="3.5"/>
+    <circle cx="300" cy="132" r="3.5"/><circle cx="345" cy="150" r="3.5"/>
+    <circle cx="390" cy="105" r="3.5"/><circle cx="430" cy="122" r="3.5"/>
+  </g>
+  <!-- interval at x0=275, centred on the fitted line (y=143 there), in a gap in the scatter -->
+  <line x1="275" y1="113" x2="275" y2="173" stroke="var(--pop)" stroke-width="3"/>
+  <line x1="266" y1="113" x2="284" y2="113" stroke="var(--pop)" stroke-width="3"/>
+  <line x1="266" y1="173" x2="284" y2="173" stroke="var(--pop)" stroke-width="3"/>
+  <circle cx="275" cy="143" r="3.5" fill="var(--pop)"/>
+  <line x1="275" y1="250" x2="275" y2="173" stroke="var(--pop)" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <circle cx="275" cy="250" r="4.5" fill="var(--pop)"/>
+  <text x="275" y="274" font-size="16" fill="var(--pop)" text-anchor="middle">x₀</text>
+</svg>
+<figcaption>Figure 15. At <math alttext="x sub 0"><msub><mi>x</mi><mn>0</mn></msub></math>, the interval brackets the height of the <em>line</em> — the mean response — not an individual observation.</figcaption>
+</figure>
+<details>
+  <summary>Long description of Figure 15</summary>
+  <p>A scatterplot of <em>y</em> against <em>x</em> with a solid fitted line rising from lower left to upper right. One value on the horizontal axis is marked with a dot and labelled <math alttext="x sub 0"><msub><mi>x</mi><mn>0</mn></msub></math>. Directly above it a short vertical bar with horizontal end caps crosses the fitted line, centred on it. That bar is the confidence interval for the mean response at <math alttext="x sub 0"><msub><mi>x</mi><mn>0</mn></msub></math>. Note that the bar is much shorter than the vertical scatter of the data points around the line: it is an interval for the <em>average</em> value of <em>y</em> at this predictor value, not for where a single new observation would land. The prediction interval defined next is the wider one that does the latter.</p>
+</details>
+
+<div class="eq">
+<math display="block" alttext="y hat at x sub 0, plus or minus t star at one minus alpha over two with n minus 2 degrees of freedom, times sigma hat times the square root of the quantity one over n plus the quantity x sub 0 minus x bar squared over S S X">
+  <mrow>
+    <mover><mi>y</mi><mo>^</mo></mover>
+    <mrow><mo>(</mo><msub><mi>x</mi><mn>0</mn></msub><mo>)</mo></mrow>
+    <mo>±</mo>
+    <msub><mi>t</mi><mrow><mn>1</mn><mo>−</mo><mi>α</mi><mo>/</mo><mn>2</mn><mo>,</mo><mi>n</mi><mo>−</mo><mn>2</mn></mrow></msub>
+    <mover><mi>σ</mi><mo>^</mo></mover>
+    <msqrt>
+      <mrow>
+        <mfrac><mn>1</mn><mi>n</mi></mfrac><mo>+</mo>
+        <mfrac>
+          <msup><mrow><mo>(</mo><msub><mi>x</mi><mn>0</mn></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow><mn>2</mn></msup>
+          <mi>SSX</mi>
+        </mfrac>
+      </mrow>
+    </msqrt>
+  </mrow>
+</math>
+</div>
+
+<h2 id="pi">Prediction interval for a new observation</h2>
+
+<p>An interval such that the <strong>next observation of <em>y</em></strong>, <math alttext="y sub new"><msub><mi>y</mi><mtext>new</mtext></msub></math>, for <math alttext="X equals x sub 0"><mrow><mi>X</mi><mo>=</mo><msub><mi>x</mi><mn>0</mn></msub></mrow></math>, will be in the interval with <math alttext="open paren one minus alpha close paren times one hundred percent"><mrow><mo>(</mo><mn>1</mn><mo>−</mo><mi>α</mi><mo>)</mo><mn>100</mn><mo>%</mo></mrow></math> confidence.</p>
+
+<div class="eq">
+<math display="block" alttext="y hat sub new at x sub 0, plus or minus t star at one minus alpha over two with n minus 2 degrees of freedom, times sigma hat times the square root of the quantity one plus one over n plus the quantity x sub 0 minus x bar squared over S S X">
+  <mrow>
+    <msub><mover><mi>y</mi><mo>^</mo></mover><mtext>new</mtext></msub>
+    <mrow><mo>(</mo><msub><mi>x</mi><mn>0</mn></msub><mo>)</mo></mrow>
+    <mo>±</mo>
+    <msub><mi>t</mi><mrow><mn>1</mn><mo>−</mo><mi>α</mi><mo>/</mo><mn>2</mn><mo>,</mo><mi>n</mi><mo>−</mo><mn>2</mn></mrow></msub>
+    <mover><mi>σ</mi><mo>^</mo></mover>
+    <msqrt>
+      <mrow>
+        <mn>1</mn><mo>+</mo>
+        <mfrac><mn>1</mn><mi>n</mi></mfrac><mo>+</mo>
+        <mfrac>
+          <msup><mrow><mo>(</mo><msub><mi>x</mi><mn>0</mn></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow><mn>2</mn></msup>
+          <mi>SSX</mi>
+        </mfrac>
+      </mrow>
+    </msqrt>
+  </mrow>
+</math>
+</div>
+
+<div class="note">
+  <p><span class="tag" style="color:var(--est)">Where the extra 1 comes from</span> Because <math alttext="epsilon sub i is distributed normal with mean zero and variance sigma squared"><mrow><msub><mi>ε</mi><mi>i</mi></msub><mo>∼</mo><mi>N</mi><mo>(</mo><mn>0</mn><mo>,</mo><msup><mi>σ</mi><mn>2</mn></msup><mo>)</mo></mrow></math>, predicting a <em>new</em> observation carries two sources of variability, which add:</p>
+  <math display="block" alttext="sigma squared plus sigma squared times the quantity one over n plus the quantity x minus x bar squared over S S X">
+    <mrow>
+      <munder>
+        <munder>
+          <msup><mi>σ</mi><mn>2</mn></msup>
+          <mo>⏟</mo>
+        </munder>
+        <mtext>new error</mtext>
+      </munder>
+      <mo>+</mo>
+      <munder>
+        <munder>
+          <mrow>
+            <msup><mi>σ</mi><mn>2</mn></msup>
+            <mrow><mo>(</mo>
+              <mfrac><mn>1</mn><mi>n</mi></mfrac><mo>+</mo>
+              <mfrac>
+                <msup><mrow><mo>(</mo><mi>x</mi><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow><mn>2</mn></msup>
+                <mi>SSX</mi>
+              </mfrac>
+            <mo>)</mo></mrow>
+          </mrow>
+          <mo>⏟</mo>
+        </munder>
+        <mtext>uncertainty in ŷ</mtext>
+      </munder>
+    </mrow>
+  </math>
+  <p>The confidence interval for the mean response has only the second piece. That is exactly why the prediction interval is always wider.</p>
+</div>
+
+<h2 id="ssd">III. Sum of squares decomposition</h2>
+
+<p>To check whether <em>X</em> is a significant predictor, we can use the <strong>residuals</strong>.</p>
+
+<p>If we had no predictor at all, our best prediction of <em>y</em> would just be <math alttext="y bar"><mover><mi>y</mi><mo>‾</mo></mover></math>. The decomposition compares that baseline against the fitted line.</p>
+
+<figure>
+<svg viewBox="0 0 560 348" role="img" aria-labelledby="fig16-t fig16-d" xmlns="http://www.w3.org/2000/svg">
+  <title id="fig16-t">Splitting the distance from an observation to the mean into a regression part and an error part</title>
+  <desc id="fig16-d">A scatterplot with a horizontal dotted line at y bar, the mean of y, and a rising solid fitted line. At one highlighted observation, three parallel vertical bars are drawn side by side: a dotted bar from y bar up to the observation is the total, a dashed bar from y bar up to the fitted line is the regression part, and a solid bar from the fitted line up to the observation is the error part.</desc>
+  <line x1="60" y1="280" x2="510" y2="280" stroke="currentColor" stroke-width="2"/>
+  <line x1="60" y1="280" x2="60" y2="25" stroke="currentColor" stroke-width="2"/>
+  <polygon points="510,280 502,276 502,284" fill="currentColor"/>
+  <polygon points="60,25 56,33 64,33" fill="currentColor"/>
+  <text x="515" y="285" font-size="15" fill="currentColor">x</text>
+  <text x="42" y="24" font-size="15" fill="currentColor">y</text>
+  <!-- ybar baseline -->
+  <line x1="70" y1="170" x2="470" y2="170" stroke="currentColor" stroke-width="2" stroke-dasharray="3 5"/>
+  <text x="478" y="175" font-size="16" fill="currentColor">ȳ</text>
+  <!-- fitted line -->
+  <line x1="80" y1="240" x2="460" y2="80" stroke="var(--accent)" stroke-width="3"/>
+  <text x="330" y="72" font-size="14" fill="var(--accent)">ŷ = β̂₀ + β̂₁x</text>
+  <!-- other observations -->
+  <g fill="currentColor">
+    <circle cx="130" cy="205" r="3.5"/><circle cx="185" cy="228" r="3.5"/>
+    <circle cx="240" cy="168" r="3.5"/><circle cx="360" cy="118" r="3.5"/>
+    <circle cx="415" cy="140" r="3.5"/>
+  </g>
+  <!-- highlighted observation at x=300; fitted y = 240 - (300-80)*160/380 = 147.4 ; obs at 96 -->
+  <circle cx="300" cy="96" r="5" fill="currentColor"/>
+  <!-- total: ybar(170) -> obs(96), dotted, offset left -->
+  <line x1="288" y1="170" x2="288" y2="96" stroke="var(--err)" stroke-width="3" stroke-dasharray="2 4"/>
+  <!-- regression: ybar(170) -> fitted(147) , dashed, centre -->
+  <line x1="300" y1="170" x2="300" y2="147" stroke="var(--est)" stroke-width="3" stroke-dasharray="7 4"/>
+  <!-- error: fitted(147) -> obs(96), solid, offset right -->
+  <line x1="312" y1="147" x2="312" y2="96" stroke="var(--pop)" stroke-width="3"/>
+  <!-- legend -->
+  <g font-size="13">
+    <line x1="80" y1="308" x2="110" y2="308" stroke="var(--pop)" stroke-width="3"/>
+    <text x="116" y="313" fill="var(--pop)">solid: yᵢ − ŷᵢ (error)</text>
+    <line x1="248" y1="308" x2="278" y2="308" stroke="var(--est)" stroke-width="3" stroke-dasharray="7 4"/>
+    <text x="284" y="313" fill="var(--est)">dashed: ŷᵢ − ȳ (regression)</text>
+    <line x1="80" y1="326" x2="110" y2="326" stroke="var(--err)" stroke-width="3" stroke-dasharray="2 4"/>
+    <text x="116" y="331" fill="var(--err)">dotted: yᵢ − ȳ (total)</text>
+  </g>
+</svg>
+<figcaption>Figure 16. At every observation the total distance from <math alttext="y bar"><mover><mi>y</mi><mo>‾</mo></mover></math> splits into a regression part and an error part.</figcaption>
+</figure>
+<details>
+  <summary>Long description of Figure 16</summary>
+  <p>The plot shows a horizontal dotted line at <math alttext="y bar"><mover><mi>y</mi><mo>‾</mo></mover></math> — the prediction you would make with no predictor available — and a solid rising fitted line crossing it. Several observations are scattered around. At one highlighted observation, three parallel vertical bars are drawn a few pixels apart so that all three are visible: a dotted bar running from <math alttext="y bar"><mover><mi>y</mi><mo>‾</mo></mover></math> up to the observation, a dashed bar running from <math alttext="y bar"><mover><mi>y</mi><mo>‾</mo></mover></math> up to the fitted line, and a solid bar running from the fitted line up to the observation. The dashed and solid bars stack end to end to make the dotted one, which is the whole content of the identity below: the distance from the mean to a data point is the distance the regression line explains plus the distance it fails to explain. Each bar is distinguished by dash pattern as well as colour, and the legend names all three. In the original notes these were drawn in purple, red and green respectively.</p>
+</details>
+
+<div class="eq">
+<math display="block" alttext="the sum over i of the quantity y sub i minus y hat sub i squared, plus the sum over i of the quantity y hat sub i minus y bar squared, equals the sum over i of the quantity y sub i minus y bar squared">
+  <mrow>
+    <munder><mo>∑</mo><mi>i</mi></munder>
+    <msup><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub><mo>)</mo></mrow><mn>2</mn></msup>
+    <mo>+</mo>
+    <munder><mo>∑</mo><mi>i</mi></munder>
+    <msup><mrow><mo>(</mo><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub><mo>−</mo><mover><mi>y</mi><mo>‾</mo></mover><mo>)</mo></mrow><mn>2</mn></msup>
+    <mo>=</mo>
+    <munder><mo>∑</mo><mi>i</mi></munder>
+    <msup><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><mover><mi>y</mi><mo>‾</mo></mover><mo>)</mo></mrow><mn>2</mn></msup>
+  </mrow>
+</math>
+</div>
+
+<table>
+  <caption>The three sums of squares</caption>
+  <thead>
+    <tr>
+      <th scope="col">Name</th>
+      <th scope="col">Formula</th>
+      <th scope="col">What it measures</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row"><strong>SSE</strong> (error)</th>
+      <td>
+        <math alttext="the sum over i of the quantity y sub i minus y hat sub i squared">
+          <mrow><munder><mo>∑</mo><mi>i</mi></munder><msup><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub><mo>)</mo></mrow><mn>2</mn></msup></mrow>
+        </math>
+      </td>
+      <td>what the line does <em>not</em> explain</td>
+    </tr>
+    <tr>
+      <th scope="row"><strong>SSR</strong> (regression)</th>
+      <td>
+        <math alttext="the sum over i of the quantity y hat sub i minus y bar squared">
+          <mrow><munder><mo>∑</mo><mi>i</mi></munder><msup><mrow><mo>(</mo><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub><mo>−</mo><mover><mi>y</mi><mo>‾</mo></mover><mo>)</mo></mrow><mn>2</mn></msup></mrow>
+        </math>
+      </td>
+      <td>what the line <em>does</em> explain</td>
+    </tr>
+    <tr>
+      <th scope="row"><strong>SST</strong> (total)</th>
+      <td>
+        <math alttext="the sum over i of the quantity y sub i minus y bar squared">
+          <mrow><munder><mo>∑</mo><mi>i</mi></munder><msup><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><mover><mi>y</mi><mo>‾</mo></mover><mo>)</mo></mrow><mn>2</mn></msup></mrow>
+        </math>
+      </td>
+      <td>total variability in <em>y</em></td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="extremes">Two extreme cases</h2>
+
+<figure>
+<svg viewBox="0 0 560 300" role="img" aria-labelledby="fig17-t fig17-d" xmlns="http://www.w3.org/2000/svg">
+  <title id="fig17-t">Two extreme cases: a perfect fit and a nearly flat fit</title>
+  <desc id="fig17-d">Two small scatterplots side by side. In the left panel, labelled 1, every point lies exactly on the rising fitted line, so there is no error at all. In the right panel, labelled 2, the fitted line is almost flat and the points sit far from it, close to the horizontal mean line instead.</desc>
+  <!-- panel 1 -->
+  <text x="30" y="40" font-size="17" fill="currentColor" font-weight="bold">1</text>
+  <line x1="60" y1="240" x2="255" y2="240" stroke="currentColor" stroke-width="2"/>
+  <line x1="60" y1="240" x2="60" y2="40" stroke="currentColor" stroke-width="2"/>
+  <text x="258" y="245" font-size="13" fill="currentColor">x</text>
+  <text x="46" y="38" font-size="13" fill="currentColor">y</text>
+  <line x1="75" y1="215" x2="240" y2="70" stroke="var(--accent)" stroke-width="3"/>
+  <g fill="currentColor">
+    <circle cx="100" cy="193" r="4"/><circle cx="135" cy="162" r="4"/>
+    <circle cx="170" cy="132" r="4"/><circle cx="205" cy="101" r="4"/>
+  </g>
+  <text x="70" y="272" font-size="13" fill="var(--pop)">SSE = 0, SSR = SST</text>
+  <text x="70" y="290" font-size="13" fill="currentColor">reject H₀: slope matters</text>
+  <!-- panel 2 -->
+  <text x="300" y="40" font-size="17" fill="currentColor" font-weight="bold">2</text>
+  <line x1="330" y1="240" x2="525" y2="240" stroke="currentColor" stroke-width="2"/>
+  <line x1="330" y1="240" x2="330" y2="40" stroke="currentColor" stroke-width="2"/>
+  <text x="528" y="245" font-size="13" fill="currentColor">x</text>
+  <text x="316" y="38" font-size="13" fill="currentColor">y</text>
+  <line x1="340" y1="152" x2="512" y2="128" stroke="currentColor" stroke-width="2" stroke-dasharray="3 5"/>
+  <text x="516" y="133" font-size="13" fill="currentColor">ȳ</text>
+  <line x1="345" y1="158" x2="510" y2="122" stroke="var(--accent)" stroke-width="3"/>
+  <g fill="currentColor">
+    <circle cx="370" cy="95" r="4"/><circle cx="405" cy="185" r="4"/>
+    <circle cx="440" cy="110" r="4"/><circle cx="475" cy="178" r="4"/>
+  </g>
+  <text x="340" y="272" font-size="13" fill="var(--pop)">SSE large, SSR small</text>
+  <text x="340" y="290" font-size="13" fill="currentColor">fail to reject H₀</text>
+</svg>
+<figcaption>Figure 17. The <math alttext="F"><mi>F</mi></math> test is a comparison of how much of <strong>SST</strong> is made of <strong>SSR</strong> versus <strong>SSE</strong>.</figcaption>
+</figure>
+<details>
+  <summary>Long description of Figure 17</summary>
+  <p><strong>Panel 1</strong> shows four points lying exactly on the rising fitted line. Every residual is zero, so <math alttext="the sum of the quantity y sub i minus y hat sub i squared equals zero"><mrow><munder><mo>∑</mo><mi>i</mi></munder><msup><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub><mo>)</mo></mrow><mn>2</mn></msup><mo>=</mo><mn>0</mn></mrow></math>, which is SSE, and since <math alttext="y sub i equals y hat sub i for all i"><mrow><msub><mi>y</mi><mi>i</mi></msub><mo>=</mo><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub></mrow></math> the regression sum of squares equals the total. Here SST is made up of a <em>lot more</em> SSR than SSE, and we reject the null: the slope is real.</p>
+  <p><strong>Panel 2</strong> shows the opposite. The fitted line is nearly flat and almost indistinguishable from the dashed horizontal line at <math alttext="y bar"><mover><mi>y</mi><mo>‾</mo></mover></math>, while the points sit far above and below both. SST is made up of relatively more SSE than SSR, and we fail to reject the null. Reading the two panels together is the intuition behind the test statistic: it is a ratio, and what matters is which of the two pieces dominates.</p>
+</details>
+
+<h2 id="ftest">IV. The F-test</h2>
+
+<div class="eq">
+<math display="block" alttext="S S R over 1, divided by S S E over n minus 2, is distributed as F with 1 and n minus 2 degrees of freedom">
+  <mrow>
+    <mfrac>
+      <mrow><mi>SSR</mi><mo>/</mo><mn>1</mn></mrow>
+      <mrow><mi>SSE</mi><mo>/</mo><mrow><mo>(</mo><mi>n</mi><mo>−</mo><mn>2</mn><mo>)</mo></mrow></mrow>
+    </mfrac>
+    <mo>∼</mo>
+    <msub><mi>F</mi><mrow><mn>1</mn><mo>,</mo><mi>n</mi><mo>−</mo><mn>2</mn></mrow></msub>
+  </mrow>
+</math>
+</div>
+
+<div class="note">
+  <p><span class="tag" style="color:var(--pop)">Degrees of freedom in general</span> With <math alttext="p"><mi>p</mi></math> the number of <math alttext="beta"><mi>β</mi></math>'s in the model, the numerator has <math alttext="p minus 1"><mrow><mi>p</mi><mo>−</mo><mn>1</mn></mrow></math> degrees of freedom and the denominator has <math alttext="n minus p"><mrow><mi>n</mi><mo>−</mo><mi>p</mi></mrow></math>. For SLR, <math alttext="p equals two"><mrow><mi>p</mi><mo>=</mo><mn>2</mn></mrow></math>, which gives <math alttext="1 and n minus 2"><mrow><mn>1</mn></mrow></math> and <math alttext="n minus 2"><mrow><mi>n</mi><mo>−</mo><mn>2</mn></mrow></math>.</p>
+</div>
+
+<h2 id="fdist">The F distribution</h2>
+
+<p>Let <math alttext="U is distributed chi-squared with k degrees of freedom"><mrow><mi>U</mi><mo>∼</mo><msubsup><mi>χ</mi><mi>k</mi><mn>2</mn></msubsup></mrow></math> and <math alttext="V is distributed chi-squared with m degrees of freedom"><mrow><mi>V</mi><mo>∼</mo><msubsup><mi>χ</mi><mi>m</mi><mn>2</mn></msubsup></mrow></math>, with <math alttext="U"><mi>U</mi></math> and <math alttext="V"><mi>V</mi></math> <strong>independent</strong>. Then</p>
+
+<div class="eq">
+<math display="block" alttext="F equals U over k, divided by V over m, distributed as F with k and m degrees of freedom">
+  <mrow>
+    <mi>F</mi><mo>=</mo>
+    <mfrac>
+      <mrow><mi>U</mi><mo>/</mo><mi>k</mi></mrow>
+      <mrow><mi>V</mi><mo>/</mo><mi>m</mi></mrow>
+    </mfrac>
+    <mo>∼</mo>
+    <msub><mi>F</mi><mrow><mi>k</mi><mo>,</mo><mi>m</mi></mrow></msub>
+  </mrow>
+</math>
+</div>
+
+<figure>
+<svg viewBox="0 0 560 290" role="img" aria-labelledby="fig18-t fig18-d" xmlns="http://www.w3.org/2000/svg">
+  <title id="fig18-t">Density of the F distribution with the upper tail of area alpha marked</title>
+  <desc id="fig18-d">A right-skewed density curve rising from the origin to a peak and falling away to the right. A vertical line near the right end cuts off a small shaded tail of area alpha, labelled F star; the large region to its left is labelled one minus alpha.</desc>
+  <line x1="70" y1="240" x2="520" y2="240" stroke="currentColor" stroke-width="2"/>
+  <line x1="70" y1="240" x2="70" y2="40" stroke="currentColor" stroke-width="2"/>
+  <polygon points="520,240 512,236 512,244" fill="currentColor"/>
+  <polygon points="70,40 66,48 74,48" fill="currentColor"/>
+  <text x="26" y="52" font-size="15" fill="currentColor">f(F)</text>
+  <text x="524" y="245" font-size="15" fill="currentColor">F</text>
+  <path d="M70,240 C 110,238 150,90 230,78 C 310,68 360,150 420,200 C 450,224 470,234 500,238"
+        fill="none" stroke="var(--est)" stroke-width="3"/>
+  <text x="215" y="150" font-size="17" fill="currentColor" text-anchor="middle">1 − α</text>
+  <line x1="440" y1="240" x2="440" y2="208" stroke="var(--pop)" stroke-width="2"/>
+  <g stroke="var(--pop)" stroke-width="1.5">
+    <line x1="446" y1="240" x2="446" y2="219"/>
+    <line x1="452" y1="240" x2="452" y2="226"/>
+    <line x1="458" y1="240" x2="458" y2="230"/>
+    <line x1="464" y1="240" x2="464" y2="233"/>
+  </g>
+  <line x1="470" y1="185" x2="452" y2="212" stroke="var(--pop)" stroke-width="1.5"/>
+  <text x="474" y="181" font-size="16" fill="var(--pop)">α</text>
+  <text x="440" y="264" font-size="15" fill="var(--pop)" text-anchor="middle">F*</text>
+</svg>
+<figcaption>Figure 18. Unlike the <math alttext="t"><mi>t</mi></math>, the <math alttext="F"><mi>F</mi></math> test is one-sided: only a large <math alttext="F"><mi>F</mi></math> counts as evidence.</figcaption>
+</figure>
+<details>
+  <summary>Long description of Figure 18</summary>
+  <p>The horizontal axis is <math alttext="F"><mi>F</mi></math> and the vertical axis its density <math alttext="f of F"><mrow><mi>f</mi><mo>(</mo><mi>F</mi><mo>)</mo></mrow></math>. The curve starts at the origin, rises steeply to a peak in the left half, and then decays slowly to the right. A vertical line near the right-hand end marks the critical value <math alttext="F star"><msup><mi>F</mi><mo>*</mo></msup></math>; the region beyond it is hatched and labelled <math alttext="alpha"><mi>α</mi></math>, and the region to its left is labelled <math alttext="one minus alpha"><mrow><mn>1</mn><mo>−</mo><mi>α</mi></mrow></math>. Because the statistic is a ratio of two non-negative sums of squares it can never be negative, and only <em>large</em> values are evidence against the null — so the whole rejection region sits in one tail, unlike the two-tailed <math alttext="t"><mi>t</mi></math> test.</p>
+</details>
+
+<h3>Why the ratio has an F distribution</h3>
+
+<div class="eq">
+<math display="block" alttext="S S R over sigma squared is distributed chi-squared with 1 degree of freedom">
+  <mrow>
+    <mfrac><mi>SSR</mi><msup><mi>σ</mi><mn>2</mn></msup></mfrac>
+    <mo>∼</mo>
+    <msubsup><mi>χ</mi><mn>1</mn><mn>2</mn></msubsup>
+  </mrow>
+</math>
+</div>
+
+<div class="eq">
+<math display="block" alttext="S S E over sigma squared is distributed chi-squared with n minus 2 degrees of freedom">
+  <mrow>
+    <mfrac><mi>SSE</mi><msup><mi>σ</mi><mn>2</mn></msup></mfrac>
+    <mo>∼</mo>
+    <msubsup><mi>χ</mi><mrow><mi>n</mi><mo>−</mo><mn>2</mn></mrow><mn>2</mn></msubsup>
+  </mrow>
+</math>
+</div>
+
+<p>So, taking the ratio and letting the <math alttext="sigma squared"><msup><mi>σ</mi><mn>2</mn></msup></math> cancel,</p>
+
+<div class="eq">
+<math display="block" alttext="F equals S S R over 1 divided by S S E over n minus 2, distributed as F with 1 and n minus 2 degrees of freedom">
+  <mrow>
+    <mi>F</mi><mo>=</mo>
+    <mfrac>
+      <mrow><mi>SSR</mi><mo>/</mo><mn>1</mn></mrow>
+      <mrow><mi>SSE</mi><mo>/</mo><mrow><mo>(</mo><mi>n</mi><mo>−</mo><mn>2</mn><mo>)</mo></mrow></mrow>
+    </mfrac>
+    <mo>∼</mo>
+    <msub><mi>F</mi><mrow><mn>1</mn><mo>,</mo><mi>n</mi><mo>−</mo><mn>2</mn></mrow></msub>
+  </mrow>
+</math>
+</div>
+
+<table>
+  <caption>Reading the statistic</caption>
+  <thead>
+    <tr>
+      <th scope="col">If SSE is …</th>
+      <th scope="col">relative to SSR</th>
+      <th scope="col">then the slope is …</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><th scope="row">large</th><td>bigger share of SST</td><td><strong>not significant</strong></td></tr>
+    <tr><th scope="row">small</th><td>smaller share of SST</td><td><strong>significant</strong></td></tr>
+  </tbody>
+</table>
+
+<h2 id="decision">Decision rule</h2>
+
+<div class="eq">
+<math display="block" alttext="if F is greater than F star at one minus alpha, with 1 and n minus 2 degrees of freedom, reject H naught">
+  <mrow>
+    <mi>F</mi><mo>&gt;</mo>
+    <msubsup><mi>F</mi><mrow><mn>1</mn><mo>−</mo><mi>α</mi><mo>,</mo><mn>1</mn><mo>,</mo><mi>n</mi><mo>−</mo><mn>2</mn></mrow><mo>*</mo></msubsup>
+  </mrow>
+</math>
+</div>
+
+<p>then <strong>reject <math alttext="H naught"><msub><mi>H</mi><mn>0</mn></msub></math></strong> and say "<em>X</em> is a significant predictor of <em>y</em>."</p>
+
+<h2 id="r2">V. Coefficient of determination</h2>
+
+<div class="eq">
+<math display="block" alttext="R squared is defined as one minus S S E over S S T">
+  <mrow>
+    <msup><mi>R</mi><mn>2</mn></msup>
+    <mo>:=</mo>
+    <mn>1</mn><mo>−</mo>
+    <mfrac><mi>SSE</mi><mi>SST</mi></mfrac>
+  </mrow>
+</math>
+</div>
+
+<figure>
+<svg viewBox="0 0 560 300" role="img" aria-labelledby="fig19-t fig19-d" xmlns="http://www.w3.org/2000/svg">
+  <title id="fig19-t">A high R-squared fit compared with a low R-squared fit</title>
+  <desc id="fig19-d">Two small scatterplots side by side, each with a dotted horizontal mean line and a rising fitted line. On the left the points hug the fitted line closely while sitting far from the mean line, so the error is small compared with the total. On the right the points are scattered widely around the fitted line, roughly as far from it as from the mean line.</desc>
+  <!-- panel A : high R2 -->
+  <line x1="60" y1="240" x2="255" y2="240" stroke="currentColor" stroke-width="2"/>
+  <line x1="60" y1="240" x2="60" y2="35" stroke="currentColor" stroke-width="2"/>
+  <text x="258" y="245" font-size="13" fill="currentColor">x</text>
+  <text x="46" y="34" font-size="13" fill="currentColor">y</text>
+  <line x1="68" y1="140" x2="245" y2="140" stroke="currentColor" stroke-width="2" stroke-dasharray="3 5"/>
+  <text x="230" y="133" font-size="13" fill="currentColor">ȳ</text>
+  <line x1="75" y1="205" x2="240" y2="70" stroke="var(--accent)" stroke-width="3"/>
+  <g fill="currentColor">
+    <circle cx="100" cy="190" r="4"/><circle cx="140" cy="147" r="4"/>
+    <circle cx="180" cy="118" r="4"/><circle cx="220" cy="82" r="4"/>
+  </g>
+  <text x="62" y="272" font-size="13" fill="var(--pop)">SSE ≪ SST</text>
+  <text x="62" y="290" font-size="13" fill="currentColor">R² ≈ 1</text>
+  <!-- panel B : low R2 -->
+  <line x1="330" y1="240" x2="525" y2="240" stroke="currentColor" stroke-width="2"/>
+  <line x1="330" y1="240" x2="330" y2="35" stroke="currentColor" stroke-width="2"/>
+  <text x="528" y="245" font-size="13" fill="currentColor">x</text>
+  <text x="316" y="34" font-size="13" fill="currentColor">y</text>
+  <line x1="338" y1="140" x2="515" y2="140" stroke="currentColor" stroke-width="2" stroke-dasharray="3 5"/>
+  <text x="500" y="133" font-size="13" fill="currentColor">ȳ</text>
+  <line x1="345" y1="200" x2="510" y2="78" stroke="var(--accent)" stroke-width="3"/>
+  <g fill="currentColor">
+    <circle cx="370" cy="70" r="4"/><circle cx="405" cy="195" r="4"/>
+    <circle cx="440" cy="105" r="4"/><circle cx="475" cy="200" r="4"/>
+  </g>
+  <text x="332" y="272" font-size="13" fill="var(--pop)">SSE ≈ SST</text>
+  <text x="332" y="290" font-size="13" fill="currentColor">R² closer to 0</text>
+</svg>
+<figcaption>Figure 19. <math alttext="R squared"><msup><mi>R</mi><mn>2</mn></msup></math> asks what fraction of the total variability the line removes.</figcaption>
+</figure>
+<details>
+  <summary>Long description of Figure 19</summary>
+  <p><strong>Left panel.</strong> The four observations lie close to the rising fitted line, but well above and below the dotted horizontal line at <math alttext="y bar"><mover><mi>y</mi><mo>‾</mo></mover></math>. So SSE is much smaller than SST, <math alttext="R squared equals one minus something small"><msup><mi>R</mi><mn>2</mn></msup></math> is one minus something small, and <math alttext="R squared is approximately one"><mrow><msup><mi>R</mi><mn>2</mn></msup><mo>≈</mo><mn>1</mn></mrow></math>.</p>
+  <p><strong>Right panel.</strong> The observations are scattered widely, sitting about as far from the fitted line as from the mean line. Now SSE is close to SST, so <math alttext="R squared"><msup><mi>R</mi><mn>2</mn></msup></math> is one minus something close to one, which puts it closer to <math alttext="zero"><mn>0</mn></math>. Between these two extremes lies the bound <math alttext="zero is less than or equal to R squared is less than or equal to one"><mrow><mn>0</mn><mo>≤</mo><msup><mi>R</mi><mn>2</mn></msup><mo>≤</mo><mn>1</mn></mrow></math>.</p>
+</details>
+
+<div class="eq">
+<math display="block" alttext="zero is less than or equal to R squared, which is less than or equal to one">
+  <mrow>
+    <mn>0</mn><mo>≤</mo><msup><mi>R</mi><mn>2</mn></msup><mo>≤</mo><mn>1</mn>
+  </mrow>
+</math>
+</div>
+
+<div class="note">
+  <p><strong>Interpretation.</strong> <math alttext="R squared"><msup><mi>R</mi><mn>2</mn></msup></math> is the <strong>proportion of variance in <em>y</em> explained by the model</strong>.</p>
+</div>
+
+<h2 id="rho">R-squared and the correlation coefficient</h2>
+
+<p>For SLR,</p>
+
+<div class="eq">
+<math display="block" alttext="R squared equals rho squared">
+  <mrow>
+    <msup><mi>R</mi><mn>2</mn></msup><mo>=</mo><msup><mi>ρ</mi><mn>2</mn></msup>
+  </mrow>
+</math>
+</div>
+
+<p>where <math alttext="rho"><mi>ρ</mi></math> is the <strong>sample correlation coefficient</strong> between <em>X</em> and <em>y</em>:</p>
+
+<div class="eq">
+<math display="block" alttext="rho equals the sum over i of the quantity x sub i minus x bar times the quantity y sub i minus y bar, divided by the square root of the sum of the quantity x sub i minus x bar squared, times the square root of the sum of the quantity y sub i minus y bar squared">
+  <mrow>
+    <mi>ρ</mi><mo>=</mo>
+    <mfrac>
+      <mrow>
+        <munder><mo>∑</mo><mi>i</mi></munder>
+        <mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow>
+        <mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><mover><mi>y</mi><mo>‾</mo></mover><mo>)</mo></mrow>
+      </mrow>
+      <mrow>
+        <msqrt>
+          <mrow><munder><mo>∑</mo><mi>i</mi></munder><msup><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow><mn>2</mn></msup></mrow>
+        </msqrt>
+        <msqrt>
+          <mrow><munder><mo>∑</mo><mi>i</mi></munder><msup><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><mover><mi>y</mi><mo>‾</mo></mover><mo>)</mo></mrow><mn>2</mn></msup></mrow>
+        </msqrt>
+      </mrow>
+    </mfrac>
+  </mrow>
+</math>
+</div>
+
+</main>
+
+<footer>
+  <p>Transcribed from the handwritten notes <em>LR_week_3_day_1_2.pdf</em> (6 pages). Equations are MathML; figures are inline SVG with title, description, and an expandable long description. Figure numbering continues from Week 2, Day 2. Conforms to WCAG 2.2 Level AA.</p>
+</footer>
+</div>
+</body>
+</html>
