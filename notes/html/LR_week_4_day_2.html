@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Hat Matrix as a Projection, and the F-test Family — Week 4, Day 2 | DSAI 601</title>
+<meta name="description" content="Accessible class notes on the distributions of the fitted values and residuals in matrix form, the hat matrix as a projection matrix, the estimator of the error variance, the global F-test, the ANOVA table, and the partial F-test for a subset of predictors.">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --muted: #4a4a4a;
+    --rule: #c9c9c9;
+    --accent: #0b4f8a;
+    --accent-bg: #eef4fa;
+    --focus: #0b4f8a;
+    --pop: #a4262c;   /* population / true  — 5.9:1 on white */
+    --est: #5b2d8e;   /* estimate / fitted  — 8.5:1 on white */
+    --err: #8a5000;   /* errors / residuals — 5.1:1 on white */
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #f2f2f2; --muted: #cfcfcf; --rule: #555;
+      --accent: #8ab8e0; --accent-bg: #182430; --focus: #8ab8e0;
+      --pop: #ff9f99; --est: #cbb0ff; --err: #f0b458;
+    }
+    body { background: #131313; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 1.0625rem;
+    line-height: 1.65;
+    color: var(--ink);
+    background: #fff;
+  }
+  @media (prefers-color-scheme: dark) { body { background: #131313; } }
+  .wrap { max-width: 46rem; margin: 0 auto; padding: 1.5rem 1.25rem 5rem; }
+  a { color: var(--accent); }
+  a:focus-visible, summary:focus-visible, :focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+  .skip {
+    position: absolute; left: -9999px; top: 0;
+    background: var(--accent); color: #fff;
+    padding: .75rem 1rem; z-index: 10; text-decoration: none;
+  }
+  .skip:focus { left: .5rem; top: .5rem; }
+  h1 { font-size: 1.85rem; line-height: 1.25; margin: 0 0 .25rem; }
+  h2 { font-size: 1.35rem; line-height: 1.3; margin: 2.5rem 0 .5rem;
+       padding-top: .75rem; border-top: 2px solid var(--rule); }
+  h3 { font-size: 1.1rem; margin: 1.75rem 0 .4rem; }
+  p, li { max-width: 42rem; }
+  .lede { color: var(--muted); margin-top: 0; }
+  nav.toc {
+    background: var(--accent-bg); border: 1px solid var(--rule);
+    border-radius: 8px; padding: 1rem 1.25rem; margin: 2rem 0;
+  }
+  nav.toc h2 { font-size: 1.05rem; margin: 0 0 .5rem; border: 0; padding: 0; }
+  nav.toc ol { margin: 0; padding-left: 1.25rem; }
+  nav.toc li { margin: .3rem 0; }
+  nav.toc a { display: inline-block; min-height: 24px; padding: 2px 0; }
+  table { border-collapse: collapse; margin: 1rem 0; width: 100%; }
+  /* wide tables (long model equations) scroll inside their own box so the
+     page itself never scrolls horizontally -- WCAG 1.4.10 reflow */
+  .tablewrap { overflow-x: auto; margin: 1rem 0; }
+  .tablewrap > table { margin: 0; }
+  caption { text-align: left; font-weight: 600; padding-bottom: .5rem; }
+  th, td { border: 1px solid var(--rule); padding: .5rem .7rem; text-align: left; }
+  thead th { background: var(--accent-bg); }
+  figure { margin: 1.5rem 0; }
+  figcaption { font-size: .95rem; color: var(--muted); margin-top: .5rem; }
+  svg { max-width: 100%; height: auto; display: block; }
+  details {
+    border: 1px solid var(--rule); border-radius: 6px;
+    padding: .5rem .85rem; margin: .75rem 0; background: var(--accent-bg);
+  }
+  summary { cursor: pointer; font-weight: 600; min-height: 24px; padding: .25rem 0; }
+  details[open] summary { margin-bottom: .5rem; }
+  math { font-size: 1.15em; }
+  math[display="block"] { margin: 1rem 0; overflow-x: auto; overflow-y: hidden; }
+  .eq { margin: 1.25rem 0; }
+  .note {
+    border-left: 4px solid var(--accent); background: var(--accent-bg);
+    padding: .75rem 1rem; margin: 1.25rem 0; border-radius: 0 6px 6px 0;
+  }
+  .note > :first-child { margin-top: 0; }
+  .note > :last-child { margin-bottom: 0; }
+  .tag {
+    display: inline-block; font-size: .8rem; font-weight: 700;
+    letter-spacing: .02em; text-transform: uppercase;
+    border: 1px solid currentColor; border-radius: 4px;
+    padding: 0 .4em; white-space: nowrap;
+  }
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 2px solid var(--rule);
+           color: var(--muted); font-size: .95rem; }
+  ol.steps { padding-left: 1.4rem; }
+  ol.steps > li { margin: .75rem 0; }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+
+<div class="wrap">
+<header>
+  <p class="lede"><strong>DSAI 601 — Regression</strong> · Fall 2026 · Week 4, Day 2</p>
+  <h1>The Hat Matrix as a Projection, and the F-test Family</h1>
+  <p class="lede">Accessible transcription of the handwritten class notes. All equations are marked up in MathML so they can be read by a screen reader, magnified, or rendered in braille. All figures have text descriptions. Annotations written in a second pen colour in the original are reproduced here as labelled callouts and table columns, so none of their meaning depends on colour.</p>
+</header>
+
+<nav class="toc" aria-labelledby="toc-h">
+  <h2 id="toc-h">On this page</h2>
+  <ol>
+    <li><a href="#recap">Recap: the model in matrix form</a></li>
+    <li><a href="#fitted">I. Distribution of the fitted values</a></li>
+    <li><a href="#projection">H is a projection matrix</a></li>
+    <li><a href="#orthogonal">Residuals are orthogonal to fitted values</a></li>
+    <li><a href="#resid">Distribution of the residuals</a></li>
+    <li><a href="#sigma">II. Estimating the error variance</a></li>
+    <li><a href="#global">III. The global F-test</a></li>
+    <li><a href="#anova">The ANOVA table</a></li>
+    <li><a href="#partial">IV. The partial F-test</a></li>
+  </ol>
+</nav>
+
+<main id="main">
+
+<h2 id="recap">Recap: the model in matrix form</h2>
+
+<div class="eq">
+<math display="block" alttext="Y, which is n by 1, equals X, which is n by p, times beta, which is p by 1">
+  <mrow>
+    <munder><mi>Y</mi><mrow><mi>n</mi><mo>×</mo><mn>1</mn></mrow></munder>
+    <mo>=</mo>
+    <munder><mi>X</mi><mrow><mi>n</mi><mo>×</mo><mi>p</mi></mrow></munder>
+    <munder><mi>β</mi><mrow><mi>p</mi><mo>×</mo><mn>1</mn></mrow></munder>
+  </mrow>
+</math>
+</div>
+
+<div class="tablewrap">
+<table>
+  <caption>The four objects and their shapes</caption>
+  <thead>
+    <tr><th scope="col">Object</th><th scope="col">Contents</th><th scope="col">Shape</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row"><math alttext="Y"><mi>Y</mi></math></th>
+      <td>responses <math alttext="y sub 1 through y sub n"><mrow><msub><mi>y</mi><mn>1</mn></msub><mo>,</mo><mo>…</mo><mo>,</mo><msub><mi>y</mi><mi>n</mi></msub></mrow></math></td>
+      <td><math alttext="n by 1"><mrow><mi>n</mi><mo>×</mo><mn>1</mn></mrow></math></td>
+    </tr>
+    <tr>
+      <th scope="row"><math alttext="X"><mi>X</mi></math></th>
+      <td>a column of ones, then the predictors</td>
+      <td><math alttext="n by p"><mrow><mi>n</mi><mo>×</mo><mi>p</mi></mrow></math></td>
+    </tr>
+    <tr>
+      <th scope="row"><math alttext="beta"><mi>β</mi></math></th>
+      <td>coefficients <math alttext="beta sub 0 through beta sub p minus 1"><mrow><msub><mi>β</mi><mn>0</mn></msub><mo>,</mo><mo>…</mo><mo>,</mo><msub><mi>β</mi><mrow><mi>p</mi><mo>−</mo><mn>1</mn></mrow></msub></mrow></math></td>
+      <td><math alttext="p by 1"><mrow><mi>p</mi><mo>×</mo><mn>1</mn></mrow></math></td>
+    </tr>
+    <tr>
+      <th scope="row"><math alttext="epsilon"><mi>ε</mi></math></th>
+      <td>errors <math alttext="epsilon sub 1 through epsilon sub n"><mrow><msub><mi>ε</mi><mn>1</mn></msub><mo>,</mo><mo>…</mo><mo>,</mo><msub><mi>ε</mi><mi>n</mi></msub></mrow></math></td>
+      <td><math alttext="n by 1"><mrow><mi>n</mi><mo>×</mo><mn>1</mn></mrow></math></td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="eq">
+<math display="block" alttext="Y hat equals X beta hat; beta hat equals the inverse of X transpose X times X transpose Y; Y hat equals X times the inverse of X transpose X times X transpose Y, where that product is called H; e equals the quantity I minus H times Y">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd><mover><mi>Y</mi><mo>^</mo></mover></mtd><mtd><mo>=</mo></mtd>
+      <mtd><mrow><mi>X</mi><mover><mi>β</mi><mo>^</mo></mover></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd><mover><mi>β</mi><mo>^</mo></mover></mtd><mtd><mo>=</mo></mtd>
+      <mtd><mrow><msup><mrow><mo>(</mo><msup><mi>X</mi><mi>T</mi></msup><mi>X</mi><mo>)</mo></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup><msup><mi>X</mi><mi>T</mi></msup><mi>Y</mi></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd><mover><mi>Y</mi><mo>^</mo></mover></mtd><mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <munder>
+            <munder>
+              <mrow><mi>X</mi><msup><mrow><mo>(</mo><msup><mi>X</mi><mi>T</mi></msup><mi>X</mi><mo>)</mo></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup><msup><mi>X</mi><mi>T</mi></msup></mrow>
+              <mo>⏟</mo>
+            </munder>
+            <mi>H</mi>
+          </munder>
+          <mi>Y</mi>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd><mi>e</mi></mtd><mtd><mo>=</mo></mtd>
+      <mtd><mrow><mo>(</mo><mi>I</mi><mo>−</mo><mi>H</mi><mo>)</mo><mi>Y</mi></mrow></mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<div class="eq">
+<math display="block" alttext="Y is distributed normal with mean X beta and covariance sigma squared times the n by n identity; beta hat is distributed normal with mean beta and covariance sigma squared times the inverse of X transpose X, which is p by p">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd><mi>Y</mi></mtd><mtd><mo>∼</mo></mtd>
+      <mtd><mrow><mi>N</mi><mrow><mo>(</mo><mi>X</mi><mi>β</mi><mo>,</mo><msup><mi>σ</mi><mn>2</mn></msup><msub><mi>I</mi><mrow><mi>n</mi><mo>×</mo><mi>n</mi></mrow></msub><mo>)</mo></mrow></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd><mover><mi>β</mi><mo>^</mo></mover></mtd><mtd><mo>∼</mo></mtd>
+      <mtd><mrow><mi>N</mi><mrow><mo>(</mo><mi>β</mi><mo>,</mo><msup><mi>σ</mi><mn>2</mn></msup><munder><msup><mrow><mo>(</mo><msup><mi>X</mi><mi>T</mi></msup><mi>X</mi><mo>)</mo></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup><mrow><mi>p</mi><mo>×</mo><mi>p</mi></mrow></munder><mo>)</mo></mrow></mrow></mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<div class="note">
+  <p><strong>Reading the covariance matrix of <math alttext="beta hat"><mover><mi>β</mi><mo>^</mo></mover></math>.</strong> It is <math alttext="p by p"><mrow><mi>p</mi><mo>×</mo><mi>p</mi></mrow></math>, with the individual variances down the diagonal:</p>
+  <math display="block" alttext="the variance of beta hat is the matrix with the variance of beta hat sub 0 in the top left, down to the variance of beta hat sub p minus 1 in the bottom right">
+    <mrow>
+      <mi>Var</mi><mo>(</mo><mover><mi>β</mi><mo>^</mo></mover><mo>)</mo><mo>=</mo>
+      <mrow><mo>(</mo>
+        <mtable>
+          <mtr>
+            <mtd><mrow><mi>Var</mi><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>)</mo></mrow></mtd>
+            <mtd></mtd><mtd></mtd>
+          </mtr>
+          <mtr><mtd></mtd><mtd><mo>⋱</mo></mtd><mtd></mtd></mtr>
+          <mtr>
+            <mtd></mtd><mtd></mtd>
+            <mtd><mrow><mi>Var</mi><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mrow><mi>p</mi><mo>−</mo><mn>1</mn></mrow></msub><mo>)</mo></mrow></mtd>
+          </mtr>
+        </mtable>
+      <mo>)</mo></mrow>
+    </mrow>
+  </math>
+  <p>The off-diagonal entries are the covariances between pairs of estimates — they are not zero in general, which is exactly why a coefficient's meaning depends on what else is in the model.</p>
+</div>
+
+<h2 id="fitted">I. Distribution of the fitted values</h2>
+
+<div class="eq">
+<math display="block" alttext="Y hat equals X beta hat equals X times the inverse of X transpose X times X transpose Y, which equals H Y">
+  <mrow>
+    <mover><mi>Y</mi><mo>^</mo></mover><mo>=</mo>
+    <mi>X</mi><mover><mi>β</mi><mo>^</mo></mover><mo>=</mo>
+    <mi>X</mi><msup><mrow><mo>(</mo><msup><mi>X</mi><mi>T</mi></msup><mi>X</mi><mo>)</mo></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup><msup><mi>X</mi><mi>T</mi></msup><mi>Y</mi>
+    <mo>=</mo><mi>H</mi><mi>Y</mi>
+  </mrow>
+</math>
+</div>
+
+<p>Since <math alttext="Y hat"><mover><mi>Y</mi><mo>^</mo></mover></math> is a fixed matrix times a normal vector it is normal too, so all we need are its mean and its variance.</p>
+
+<h3>The mean</h3>
+
+<div class="eq">
+<math display="block" alttext="the expected value of Y hat equals the expected value of X beta hat, which equals X times the expected value of beta hat, which equals X beta">
+  <mrow>
+    <mi>E</mi><mo>(</mo><mover><mi>Y</mi><mo>^</mo></mover><mo>)</mo><mo>=</mo>
+    <mi>E</mi><mo>(</mo><mi>X</mi><mover><mi>β</mi><mo>^</mo></mover><mo>)</mo><mo>=</mo>
+    <mi>X</mi><mi>E</mi><mo>(</mo><mover><mi>β</mi><mo>^</mo></mover><mo>)</mo><mo>=</mo>
+    <mi>X</mi><mi>β</mi>
+  </mrow>
+</math>
+</div>
+
+<h3>The variance</h3>
+
+<div class="note">
+  <p><span class="tag">Rule</span> For a constant matrix <math alttext="A"><mi>A</mi></math> and random vector <math alttext="W"><mi>W</mi></math>,</p>
+  <math display="block" alttext="the variance of A W equals A times the variance of W times A transpose">
+    <mrow><mi>Var</mi><mo>(</mo><mi>A</mi><mi>W</mi><mo>)</mo><mo>=</mo><mi>A</mi><mi>Var</mi><mo>(</mo><mi>W</mi><mo>)</mo><msup><mi>A</mi><mi>T</mi></msup></mrow>
+  </math>
+</div>
+
+<div class="eq">
+<math display="block" alttext="the variance of Y hat equals the variance of H Y, equals H times the variance of Y times H transpose, equals H sigma squared I H transpose, equals sigma squared H H transpose, equals sigma squared H">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd><mrow><mi>Var</mi><mo>(</mo><mover><mi>Y</mi><mo>^</mo></mover><mo>)</mo></mrow></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><mrow><mi>Var</mi><mo>(</mo><mi>H</mi><mi>Y</mi><mo>)</mo></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd><mtd><mo>=</mo></mtd>
+      <mtd><mrow><mi>H</mi><mi>Var</mi><mo>(</mo><mi>Y</mi><mo>)</mo><msup><mi>H</mi><mi>T</mi></msup></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd><mtd><mo>=</mo></mtd>
+      <mtd><mrow><mi>H</mi><msup><mi>σ</mi><mn>2</mn></msup><mi>I</mi><msup><mi>H</mi><mi>T</mi></msup></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd><mtd><mo>=</mo></mtd>
+      <mtd><mrow><msup><mi>σ</mi><mn>2</mn></msup><mi>H</mi><msup><mi>H</mi><mi>T</mi></msup></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd><mtd><mo>=</mo></mtd>
+      <mtd><mrow><msup><mi>σ</mi><mn>2</mn></msup><mi>H</mi></mrow></mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<p>The last two steps use two facts about <math alttext="H"><mi>H</mi></math> that we prove next: it is <strong>symmetric</strong>, so <math alttext="H transpose equals H"><mrow><msup><mi>H</mi><mi>T</mi></msup><mo>=</mo><mi>H</mi></mrow></math>, and it is <strong>idempotent</strong>, so <math alttext="H H equals H"><mrow><mi>H</mi><mi>H</mi><mo>=</mo><mi>H</mi></mrow></math>. Putting the two pieces together:</p>
+
+<div class="eq">
+<math display="block" alttext="Y hat is distributed normal with mean X beta and covariance sigma squared H">
+  <mrow>
+    <mover><mi>Y</mi><mo>^</mo></mover><mo>∼</mo><mi>N</mi>
+    <mrow><mo>(</mo><mi>X</mi><mi>β</mi><mo>,</mo><msup><mi>σ</mi><mn>2</mn></msup><mi>H</mi><mo>)</mo></mrow>
+  </mrow>
+</math>
+</div>
+
+<div class="note">
+  <p><span class="tag" style="color:var(--pop)">Transcription note</span> The handwritten notes write <math alttext="Y hat is distributed normal with blank comma blank"><mrow><mover><mi>Y</mi><mo>^</mo></mover><mo>∼</mo><mi>N</mi><mo>(</mo><mspace width="1.2em"></mspace><mo>,</mo><mspace width="1.2em"></mspace><mo>)</mo></mrow></math> with the two slots left blank, to be filled in from the mean and variance derived underneath. The completed statement above is what those derivations give.</p>
+</div>
+
+<h2 id="projection">H is a projection matrix</h2>
+
+<p>A matrix <math alttext="A"><mi>A</mi></math> is a <strong>projection matrix</strong> if two conditions hold:</p>
+
+<ol class="steps">
+  <li><math alttext="A"><mi>A</mi></math> is <strong>symmetric</strong>, <math alttext="A transpose equals A"><mrow><msup><mi>A</mi><mi>T</mi></msup><mo>=</mo><mi>A</mi></mrow></math>;</li>
+  <li><math alttext="A"><mi>A</mi></math> is <strong>idempotent</strong>, <math alttext="A squared equals A"><mrow><msup><mi>A</mi><mn>2</mn></msup><mo>=</mo><mi>A</mi></mrow></math>.</li>
+</ol>
+
+<h3>1. Symmetry</h3>
+
+<div class="eq">
+<math display="block" alttext="the transpose of X times the inverse of X transpose X times X transpose equals X times the transpose of the inverse of X transpose X times X transpose, equals X times the inverse of the transpose of X transpose X times X transpose, equals X times the inverse of X transpose X times X transpose, equals H">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd>
+        <msup><mrow><mo>(</mo><mi>X</mi><msup><mrow><mo>(</mo><msup><mi>X</mi><mi>T</mi></msup><mi>X</mi><mo>)</mo></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup><msup><mi>X</mi><mi>T</mi></msup><mo>)</mo></mrow><mi>T</mi></msup>
+      </mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow><mi>X</mi><msup><mrow><mo>[</mo><msup><mrow><mo>(</mo><msup><mi>X</mi><mi>T</mi></msup><mi>X</mi><mo>)</mo></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup><mo>]</mo></mrow><mi>T</mi></msup><msup><mi>X</mi><mi>T</mi></msup></mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd><mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow><mi>X</mi><msup><mrow><mo>[</mo><msup><mrow><mo>(</mo><msup><mi>X</mi><mi>T</mi></msup><mi>X</mi><mo>)</mo></mrow><mi>T</mi></msup><mo>]</mo></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup><msup><mi>X</mi><mi>T</mi></msup></mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd><mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow><mi>X</mi><msup><mrow><mo>(</mo><msup><mi>X</mi><mi>T</mi></msup><mi>X</mi><mo>)</mo></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup><msup><mi>X</mi><mi>T</mi></msup></mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd><mtd><mo>=</mo></mtd>
+      <mtd><mi>H</mi></mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<div class="note">
+  <p><span class="tag" style="color:var(--est)">The step that makes it work</span> <math alttext="X transpose X is symmetric, so the transpose of X transpose X equals X transpose X"><mrow><msup><mrow><mo>(</mo><msup><mi>X</mi><mi>T</mi></msup><mi>X</mi><mo>)</mo></mrow><mi>T</mi></msup><mo>=</mo><msup><mi>X</mi><mi>T</mi></msup><mi>X</mi></mrow></math>. Transpose and inverse also commute, <math alttext="the transpose of A inverse equals the inverse of A transpose"><mrow><msup><mrow><mo>(</mo><msup><mi>A</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup><mo>)</mo></mrow><mi>T</mi></msup><mo>=</mo><msup><mrow><mo>(</mo><msup><mi>A</mi><mi>T</mi></msup><mo>)</mo></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup></mrow></math>, which is what lets the transpose move inside the inverse in the second line.</p>
+</div>
+
+<h3>2. Idempotence</h3>
+
+<div class="eq">
+<math display="block" alttext="H squared equals H H equals X times the inverse of X transpose X times X transpose X times the inverse of X transpose X times X transpose, and the middle X transpose X cancels with its inverse, leaving X times the inverse of X transpose X times X transpose, which equals H">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd><msup><mi>H</mi><mn>2</mn></msup></mtd><mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <mi>X</mi><msup><mrow><mo>(</mo><msup><mi>X</mi><mi>T</mi></msup><mi>X</mi><mo>)</mo></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup>
+          <munder>
+            <munder><mrow><msup><mi>X</mi><mi>T</mi></msup><mi>X</mi></mrow><mo>⏟</mo></munder>
+            <mtext>cancels the inverse</mtext>
+          </munder>
+          <msup><mrow><mo>(</mo><msup><mi>X</mi><mi>T</mi></msup><mi>X</mi><mo>)</mo></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup><msup><mi>X</mi><mi>T</mi></msup>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd><mtd><mo>=</mo></mtd>
+      <mtd><mrow><mi>X</mi><msup><mrow><mo>(</mo><msup><mi>X</mi><mi>T</mi></msup><mi>X</mi><mo>)</mo></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup><msup><mi>X</mi><mi>T</mi></msup><mo>=</mo><mi>H</mi></mrow></mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<div class="note">
+  <p><strong>So <math alttext="H"><mi>H</mi></math> is a projection matrix.</strong> Idempotence is the algebraic form of an obvious geometric fact: once you have projected <math alttext="Y"><mi>Y</mi></math> onto the column space, projecting again changes nothing, because you are already there.</p>
+</div>
+
+<h2 id="orthogonal">Residuals are orthogonal to fitted values</h2>
+
+<figure>
+<svg viewBox="0 0 640 360" role="img" aria-labelledby="fig24-t fig24-d" xmlns="http://www.w3.org/2000/svg">
+  <title id="fig24-t">Least squares as a projection of the response vector onto the column space of the design matrix</title>
+  <desc id="fig24-d">A slanted plane represents the column space of X, spanned by axes labelled x one and x two. A long vector Y rises out of the plane from the origin. A shorter vector Y hat equals X beta hat lies flat inside the plane. A dashed segment labelled e equals Y minus Y hat joins the tip of Y hat straight up to the tip of Y, meeting the plane at a right angle.</desc>
+  <path d="M40,230 L235,120 L520,150 L330,275 Z" fill="none" stroke="var(--accent)" stroke-width="2.5"/>
+  <line x1="524" y1="162" x2="516" y2="152" stroke="var(--accent)" stroke-width="1.5"/>
+  <text x="522" y="180" font-size="14" fill="var(--accent)">Colspace(X)</text>
+  <text x="522" y="197" font-size="13" fill="var(--accent)">p-dimensional</text>
+  <line x1="185" y1="215" x2="300" y2="150" stroke="currentColor" stroke-width="2"/>
+  <polygon points="304,148 294,147 297,155" fill="currentColor"/>
+  <text x="308" y="146" font-size="14" fill="currentColor">x₁</text>
+  <line x1="185" y1="215" x2="410" y2="222" stroke="currentColor" stroke-width="2"/>
+  <polygon points="414,222 405,218 405,226" fill="currentColor"/>
+  <text x="418" y="227" font-size="14" fill="currentColor">x₂</text>
+  <line x1="185" y1="215" x2="250" y2="45" stroke="var(--est)" stroke-width="3.5"/>
+  <polygon points="250,45 244,56 255,57" fill="var(--est)"/>
+  <text x="228" y="34" font-size="15" fill="var(--est)">Y</text>
+  <text x="254" y="40" font-size="12" fill="var(--est)">(n-dimensional)</text>
+  <line x1="185" y1="215" x2="272" y2="178" stroke="var(--pop)" stroke-width="3.5"/>
+  <polygon points="276,176 266,174 269,183" fill="var(--pop)"/>
+  <text x="282" y="180" font-size="15" fill="var(--pop)">Ŷ = Xβ̂ = HY</text>
+  <line x1="272" y1="178" x2="250" y2="45" stroke="var(--err)" stroke-width="3" stroke-dasharray="7 5"/>
+  <line x1="286" y1="90" x2="263" y2="99" stroke="var(--err)" stroke-width="1.5"/>
+  <text x="292" y="76" font-size="15" fill="var(--err)">e = Y − Ŷ = (I − H)Y</text>
+  <text x="292" y="94" font-size="12" fill="var(--err)">orthogonal complement,</text>
+  <text x="292" y="110" font-size="12" fill="var(--err)">(n − p)-dimensional</text>
+  <path d="M272,178 l -13,-6 l 2,-13" fill="none" stroke="currentColor" stroke-width="1.8"/>
+  <text x="40" y="330" font-size="14" fill="currentColor">The right angle at Ŷ is what we verify algebraically below.</text>
+</svg>
+<figcaption>Figure 24. <math alttext="H"><mi>H</mi></math> projects <math alttext="Y"><mi>Y</mi></math> into the column space; <math alttext="I minus H"><mrow><mi>I</mi><mo>−</mo><mi>H</mi></mrow></math> projects it onto the orthogonal complement.</figcaption>
+</figure>
+<details>
+  <summary>Long description of Figure 24</summary>
+  <p>The same projection picture as the previous lecture, now labelled with the two matrices. A slanted parallelogram is the column space of <math alttext="X"><mi>X</mi></math>, spanned by two in-plane axes <math alttext="x sub 1"><msub><mi>x</mi><mn>1</mn></msub></math> and <math alttext="x sub 2"><msub><mi>x</mi><mn>2</mn></msub></math>, and <math alttext="p"><mi>p</mi></math>-dimensional. A long vector <math alttext="Y"><mi>Y</mi></math> rises out of the plane from the origin; the observed responses live in <math alttext="n"><mi>n</mi></math> dimensions and do not generally lie in the plane. Inside the plane sits <math alttext="Y hat equals X beta hat equals H Y"><mrow><mover><mi>Y</mi><mo>^</mo></mover><mo>=</mo><mi>X</mi><mover><mi>β</mi><mo>^</mo></mover><mo>=</mo><mi>H</mi><mi>Y</mi></mrow></math>. A dashed segment runs from its tip up to the tip of <math alttext="Y"><mi>Y</mi></math>, labelled <math alttext="e equals Y minus Y hat equals the quantity I minus H times Y"><mrow><mi>e</mi><mo>=</mo><mi>Y</mi><mo>−</mo><mover><mi>Y</mi><mo>^</mo></mover><mo>=</mo><mo>(</mo><mi>I</mi><mo>−</mo><mi>H</mi><mo>)</mo><mi>Y</mi></mrow></math>, and a small square marks the right angle where it meets the plane.</p>
+  <p>The two matrices split the space between them: <math alttext="H"><mi>H</mi></math> sends <math alttext="Y"><mi>Y</mi></math> to the part living in the column space, and <math alttext="I minus H"><mrow><mi>I</mi><mo>−</mo><mi>H</mi></mrow></math> sends it to the part at right angles to that space, of dimension <math alttext="n minus p"><mrow><mi>n</mi><mo>−</mo><mi>p</mi></mrow></math>. The right angle in the picture is precisely the claim <math alttext="e transpose Y hat equals zero"><mrow><msup><mi>e</mi><mi>T</mi></msup><mover><mi>Y</mi><mo>^</mo></mover><mo>=</mo><mn>0</mn></mrow></math>, which the derivation below confirms.</p>
+</details>
+
+<p>The orthogonality we drew is an algebraic identity. Writing the sum as an inner product:</p>
+
+<div class="eq">
+<math display="block" alttext="the sum over i of e sub i y hat sub i equals zero equals the inner product of e and Y hat, equals e transpose Y hat, equals the transpose of the quantity I minus H times Y, times H Y, equals Y transpose times the transpose of I minus H times H Y, equals Y transpose times I minus H times H Y, equals Y transpose times the quantity H minus H squared times Y, equals Y transpose times the quantity H minus H times Y, equals zero">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd>
+        <mrow>
+          <munder><mo>∑</mo><mi>i</mi></munder><msub><mi>e</mi><mi>i</mi></msub><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub>
+          <mo>=</mo><mn>0</mn><mo>=</mo>
+          <mrow><mo>⟨</mo><mi>e</mi><mo>,</mo><mover><mi>Y</mi><mo>^</mo></mover><mo>⟩</mo></mrow>
+        </mrow>
+      </mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><mrow><msup><mi>e</mi><mi>T</mi></msup><mover><mi>Y</mi><mo>^</mo></mover></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd><mtd><mo>=</mo></mtd>
+      <mtd><mrow><msup><mrow><mo>[</mo><mo>(</mo><mi>I</mi><mo>−</mo><mi>H</mi><mo>)</mo><mi>Y</mi><mo>]</mo></mrow><mi>T</mi></msup><mi>H</mi><mi>Y</mi></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd><mtd><mo>=</mo></mtd>
+      <mtd><mrow><msup><mi>Y</mi><mi>T</mi></msup><msup><mrow><mo>(</mo><mi>I</mi><mo>−</mo><mi>H</mi><mo>)</mo></mrow><mi>T</mi></msup><mi>H</mi><mi>Y</mi></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd><mtd><mo>=</mo></mtd>
+      <mtd><mrow><msup><mi>Y</mi><mi>T</mi></msup><mrow><mo>(</mo><mi>I</mi><mo>−</mo><mi>H</mi><mo>)</mo></mrow><mi>H</mi><mi>Y</mi></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd><mtd><mo>=</mo></mtd>
+      <mtd><mrow><msup><mi>Y</mi><mi>T</mi></msup><mrow><mo>(</mo><mi>H</mi><mo>−</mo><msup><mi>H</mi><mn>2</mn></msup><mo>)</mo></mrow><mi>Y</mi></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd><mtd><mo>=</mo></mtd>
+      <mtd><mrow><msup><mi>Y</mi><mi>T</mi></msup><mrow><mo>(</mo><mi>H</mi><mo>−</mo><mi>H</mi><mo>)</mo></mrow><mi>Y</mi><mo>=</mo><mn>0</mn></mrow></mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<p class="lede">Both projection properties are used: symmetry turns <math alttext="the transpose of I minus H"><msup><mrow><mo>(</mo><mi>I</mi><mo>−</mo><mi>H</mi><mo>)</mo></mrow><mi>T</mi></msup></math> into <math alttext="I minus H"><mrow><mi>I</mi><mo>−</mo><mi>H</mi></mrow></math>, and idempotence collapses <math alttext="H minus H squared"><mrow><mi>H</mi><mo>−</mo><msup><mi>H</mi><mn>2</mn></msup></mrow></math> to zero.</p>
+
+<h2 id="resid">Distribution of the residuals</h2>
+
+<div class="eq">
+<math display="block" alttext="e equals Y minus Y hat equals Y minus H Y equals the quantity I minus H times Y">
+  <mrow>
+    <mi>e</mi><mo>=</mo><mi>Y</mi><mo>−</mo><mover><mi>Y</mi><mo>^</mo></mover>
+    <mo>=</mo><mi>Y</mi><mo>−</mo><mi>H</mi><mi>Y</mi>
+    <mo>=</mo><mrow><mo>(</mo><mi>I</mi><mo>−</mo><mi>H</mi><mo>)</mo></mrow><mi>Y</mi>
+  </mrow>
+</math>
+</div>
+
+<h3>The mean</h3>
+
+<div class="eq">
+<math display="block" alttext="the expected value of the quantity I minus H times Y equals I minus H times the expected value of Y, equals I minus H times X beta, equals the quantity X minus H X times beta, equals the quantity X minus X times the inverse of X transpose X times X transpose X, times beta, which equals zero">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd><mrow><mi>E</mi><mo>(</mo><mo>(</mo><mi>I</mi><mo>−</mo><mi>H</mi><mo>)</mo><mi>Y</mi><mo>)</mo></mrow></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><mrow><mo>(</mo><mi>I</mi><mo>−</mo><mi>H</mi><mo>)</mo><mi>E</mi><mo>(</mo><mi>Y</mi><mo>)</mo></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd><mtd><mo>=</mo></mtd>
+      <mtd><mrow><mo>(</mo><mi>I</mi><mo>−</mo><mi>H</mi><mo>)</mo><mi>X</mi><mi>β</mi></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd><mtd><mo>=</mo></mtd>
+      <mtd><mrow><mo>(</mo><mi>X</mi><mo>−</mo><mi>H</mi><mi>X</mi><mo>)</mo><mi>β</mi></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd><mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <mo>(</mo><mi>X</mi><mo>−</mo><mi>X</mi>
+          <munder>
+            <munder><mrow><msup><mrow><mo>(</mo><msup><mi>X</mi><mi>T</mi></msup><mi>X</mi><mo>)</mo></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup><msup><mi>X</mi><mi>T</mi></msup><mi>X</mi></mrow><mo>⏟</mo></munder>
+            <mtext>= I</mtext>
+          </munder>
+          <mo>)</mo><mi>β</mi>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd><mtd><mo>=</mo></mtd>
+      <mtd><mn>0</mn></mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<h3>The variance</h3>
+
+<div class="eq">
+<math display="block" alttext="the variance of the quantity I minus H times Y equals I minus H times sigma squared I times the transpose of I minus H, equals sigma squared times I minus H times I minus H, equals sigma squared times I minus H">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd><mrow><mi>Var</mi><mo>(</mo><mo>(</mo><mi>I</mi><mo>−</mo><mi>H</mi><mo>)</mo><mi>Y</mi><mo>)</mo></mrow></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><mrow><mo>(</mo><mi>I</mi><mo>−</mo><mi>H</mi><mo>)</mo><msup><mi>σ</mi><mn>2</mn></msup><mi>I</mi><msup><mrow><mo>(</mo><mi>I</mi><mo>−</mo><mi>H</mi><mo>)</mo></mrow><mi>T</mi></msup></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd><mtd><mo>=</mo></mtd>
+      <mtd><mrow><msup><mi>σ</mi><mn>2</mn></msup><mo>(</mo><mi>I</mi><mo>−</mo><mi>H</mi><mo>)</mo><mo>(</mo><mi>I</mi><mo>−</mo><mi>H</mi><mo>)</mo></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd><mtd><mo>=</mo></mtd>
+      <mtd><mrow><msup><mi>σ</mi><mn>2</mn></msup><mo>(</mo><mi>I</mi><mo>−</mo><mi>H</mi><mo>)</mo></mrow></mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<div class="eq">
+<math display="block" alttext="e is distributed normal with mean zero and covariance sigma squared times the quantity I minus H">
+  <mrow>
+    <mi>e</mi><mo>∼</mo><mi>N</mi>
+    <mrow><mo>(</mo><mn>0</mn><mo>,</mo><msup><mi>σ</mi><mn>2</mn></msup><mo>(</mo><mi>I</mi><mo>−</mo><mi>H</mi><mo>)</mo><mo>)</mo></mrow>
+  </mrow>
+</math>
+</div>
+
+<div class="note">
+  <p><strong><math alttext="I minus H"><mrow><mi>I</mi><mo>−</mo><mi>H</mi></mrow></math> is a projection matrix too.</strong> The collapse in the last line is idempotence again — if <math alttext="H squared equals H"><mrow><msup><mi>H</mi><mn>2</mn></msup><mo>=</mo><mi>H</mi></mrow></math> then <math alttext="the quantity I minus H squared equals I minus 2 H plus H squared equals I minus H"><mrow><msup><mrow><mo>(</mo><mi>I</mi><mo>−</mo><mi>H</mi><mo>)</mo></mrow><mn>2</mn></msup><mo>=</mo><mi>I</mi><mo>−</mo><mn>2</mn><mi>H</mi><mo>+</mo><msup><mi>H</mi><mn>2</mn></msup><mo>=</mo><mi>I</mi><mo>−</mo><mi>H</mi></mrow></math>. Note also that the covariance matrix is <em>not</em> diagonal: the residuals are correlated with one another even though the errors are not.</p>
+</div>
+
+<h2 id="sigma">II. Estimating the error variance</h2>
+
+<div class="eq">
+<math display="block" alttext="sigma hat squared equals S S E over n minus p, equals e transpose e over n minus p, equals M S E">
+  <mrow>
+    <msup><mover><mi>σ</mi><mo>^</mo></mover><mn>2</mn></msup><mo>=</mo>
+    <mfrac><mi>SSE</mi><mrow><mi>n</mi><mo>−</mo><mi>p</mi></mrow></mfrac>
+    <mo>=</mo>
+    <mfrac><mrow><msup><mi>e</mi><mi>T</mi></msup><mi>e</mi></mrow><mrow><mi>n</mi><mo>−</mo><mi>p</mi></mrow></mfrac>
+    <mo>=</mo><mi>MSE</mi>
+  </mrow>
+</math>
+</div>
+
+<p>The divisor is <math alttext="n minus p"><mrow><mi>n</mi><mo>−</mo><mi>p</mi></mrow></math>, not <math alttext="n minus 2"><mrow><mi>n</mi><mo>−</mo><mn>2</mn></mrow></math> — one degree of freedom is spent per coefficient estimated. It is the dimension of the orthogonal complement in Figure 24.</p>
+
+<h2 id="global">III. The global F-test</h2>
+
+<p>The question: are <strong>any</strong> of my predictors <math alttext="X sub 1 through X sub p minus 1"><mrow><msub><mi>X</mi><mn>1</mn></msub><mo>,</mo><mo>…</mo><mo>,</mo><msub><mi>X</mi><mrow><mi>p</mi><mo>−</mo><mn>1</mn></mrow></msub></mrow></math> significant predictors of <math alttext="Y"><mi>Y</mi></math>?</p>
+
+<div class="eq">
+<math display="block" alttext="H naught: beta sub 1 equals beta sub 2 equals dot dot dot equals beta sub p minus 1 equals zero; H one: at least one beta sub j is not zero">
+  <mtable columnalign="left">
+    <mtr><mtd>
+      <mrow>
+        <msub><mi>H</mi><mn>0</mn></msub><mo>:</mo>
+        <msub><mi>β</mi><mn>1</mn></msub><mo>=</mo><msub><mi>β</mi><mn>2</mn></msub><mo>=</mo><mo>⋯</mo><mo>=</mo><msub><mi>β</mi><mrow><mi>p</mi><mo>−</mo><mn>1</mn></mrow></msub><mo>=</mo><mn>0</mn>
+      </mrow>
+    </mtd></mtr>
+    <mtr><mtd>
+      <mrow>
+        <msub><mi>H</mi><mn>1</mn></msub><mo>:</mo>
+        <mtext>at least one </mtext><msub><mi>β</mi><mi>j</mi></msub><mo>≠</mo><mn>0</mn>
+      </mrow>
+    </mtd></mtr>
+  </mtable>
+</math>
+</div>
+
+<p>Written as a comparison of two models rather than a statement about parameters:</p>
+
+<div class="tablewrap">
+<table>
+  <caption>The global F-test as reduced versus full</caption>
+  <thead>
+    <tr><th scope="col">Hypothesis</th><th scope="col">Model</th><th scope="col">Name</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row"><math alttext="H naught"><msub><mi>H</mi><mn>0</mn></msub></math></th>
+      <td><math alttext="y sub i equals beta sub 0 plus epsilon sub i"><mrow><msub><mi>y</mi><mi>i</mi></msub><mo>=</mo><msub><mi>β</mi><mn>0</mn></msub><mo>+</mo><msub><mi>ε</mi><mi>i</mi></msub></mrow></math></td>
+      <td><strong>Null / reduced</strong> model <math alttext="R"><mi>R</mi></math></td>
+    </tr>
+    <tr>
+      <th scope="row"><math alttext="H one"><msub><mi>H</mi><mn>1</mn></msub></math></th>
+      <td><math alttext="y sub i equals beta sub 0 plus beta sub 1 x sub 1 i plus dot dot dot plus beta sub p minus 1 x sub p minus 1 i plus epsilon sub i"><mrow><msub><mi>y</mi><mi>i</mi></msub><mo>=</mo><msub><mi>β</mi><mn>0</mn></msub><mo>+</mo><msub><mi>β</mi><mn>1</mn></msub><msub><mi>x</mi><mrow><mn>1</mn><mi>i</mi></mrow></msub><mo>+</mo><mo>⋯</mo><mo>+</mo><msub><mi>β</mi><mrow><mi>p</mi><mo>−</mo><mn>1</mn></mrow></msub><msub><mi>x</mi><mrow><mo>(</mo><mi>p</mi><mo>−</mo><mn>1</mn><mo>)</mo><mi>i</mi></mrow></msub><mo>+</mo><msub><mi>ε</mi><mi>i</mi></msub></mrow></math></td>
+      <td><strong>Full</strong> model <math alttext="F"><mi>F</mi></math></td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="note">
+  <p><span class="tag" style="color:var(--est)">Why intercept only</span> Setting every slope to zero leaves <math alttext="y sub i equals beta sub 0 plus epsilon sub i"><mrow><msub><mi>y</mi><mi>i</mi></msub><mo>=</mo><msub><mi>β</mi><mn>0</mn></msub><mo>+</mo><msub><mi>ε</mi><mi>i</mi></msub></mrow></math>, whose least squares fit is <math alttext="y bar"><mover><mi>y</mi><mo>‾</mo></mover></math>. So the global F-test asks whether the model beats predicting with the mean.</p>
+</div>
+
+<h3>The statistic</h3>
+
+<p>In SLR this was</p>
+
+<div class="eq">
+<math display="block" alttext="F equals S S R over 1 divided by S S E over n minus 2, which equals the quantity S S T minus S S E over 1, divided by S S E over n minus 2">
+  <mrow>
+    <mi>F</mi><mo>=</mo>
+    <mfrac>
+      <mrow><mi>SSR</mi><mo>/</mo><mn>1</mn></mrow>
+      <mrow><mi>SSE</mi><mo>/</mo><mrow><mo>(</mo><mi>n</mi><mo>−</mo><mn>2</mn><mo>)</mo></mrow></mrow>
+    </mfrac>
+    <mo>=</mo>
+    <mfrac>
+      <mrow><mo>(</mo><mi>SST</mi><mo>−</mo><mi>SSE</mi><mo>)</mo><mo>/</mo><mn>1</mn></mrow>
+      <mrow><mi>SSE</mi><mo>/</mo><mrow><mo>(</mo><mi>n</mi><mo>−</mo><mn>2</mn><mo>)</mo></mrow></mrow>
+    </mfrac>
+  </mrow>
+</math>
+</div>
+
+<p>and in MLR it becomes</p>
+
+<div class="eq">
+<math display="block" alttext="F equals the quantity S S E for the reduced model minus S S E for the full model, over p minus 1, divided by S S E for the full model over n minus p, distributed as F with p minus 1 and n minus p degrees of freedom">
+  <mrow>
+    <mi>F</mi><mo>=</mo>
+    <mfrac>
+      <mrow><mo>(</mo><msub><mi>SSE</mi><mi>R</mi></msub><mo>−</mo><msub><mi>SSE</mi><mi>F</mi></msub><mo>)</mo><mo>/</mo><mo>(</mo><mi>p</mi><mo>−</mo><mn>1</mn><mo>)</mo></mrow>
+      <mrow><msub><mi>SSE</mi><mi>F</mi></msub><mo>/</mo><mo>(</mo><mi>n</mi><mo>−</mo><mi>p</mi><mo>)</mo></mrow>
+    </mfrac>
+    <mo>∼</mo>
+    <msub><mi>F</mi><mrow><mi>p</mi><mo>−</mo><mn>1</mn><mo>,</mo><mi>n</mi><mo>−</mo><mi>p</mi></mrow></msub>
+  </mrow>
+</math>
+</div>
+
+<p class="lede">with <math alttext="p"><mi>p</mi></math> the number of <math alttext="beta"><mi>β</mi></math>'s, and <math alttext="S S T equals S S E plus S S R"><mrow><mi>SST</mi><mo>=</mo><mi>SSE</mi><mo>+</mo><mi>SSR</mi></mrow></math> as before.</p>
+
+<figure>
+<svg viewBox="0 0 560 260" role="img" aria-labelledby="fig25-t fig25-d" xmlns="http://www.w3.org/2000/svg">
+  <title id="fig25-t">F density with the rejection region in the upper tail</title>
+  <desc id="fig25-d">A right-skewed density curve rising from the origin to a peak and decaying to the right. A vertical line near the right end cuts off a small shaded tail of area alpha, labelled F star with p minus 1 and n minus p degrees of freedom; the large region to its left is labelled one minus alpha.</desc>
+  <line x1="60" y1="210" x2="520" y2="210" stroke="currentColor" stroke-width="2"/>
+  <line x1="60" y1="210" x2="60" y2="30" stroke="currentColor" stroke-width="2"/>
+  <path d="M60,210 C 100,208 145,60 235,50 C 320,42 370,130 425,178 C 455,200 480,207 505,209"
+        fill="none" stroke="currentColor" stroke-width="3"/>
+  <text x="215" y="130" font-size="17" fill="currentColor" text-anchor="middle">1 − α</text>
+  <line x1="448" y1="210" x2="448" y2="186" stroke="var(--pop)" stroke-width="2"/>
+  <g stroke="var(--pop)" stroke-width="1.5">
+    <line x1="454" y1="210" x2="454" y2="193"/>
+    <line x1="460" y1="210" x2="460" y2="199"/>
+    <line x1="466" y1="210" x2="466" y2="204"/>
+  </g>
+  <line x1="478" y1="162" x2="460" y2="190" stroke="var(--pop)" stroke-width="1.5"/>
+  <text x="482" y="158" font-size="16" fill="var(--pop)">α</text>
+  <text x="448" y="234" font-size="14" fill="var(--pop)" text-anchor="middle">F*(p−1, n−p)</text>
+</svg>
+<figcaption>Figure 25. Only a large <math alttext="F"><mi>F</mi></math> counts as evidence, so the whole rejection region sits in the upper tail.</figcaption>
+</figure>
+<details>
+  <summary>Long description of Figure 25</summary>
+  <p>A right-skewed density over a horizontal axis: it starts at the origin, climbs to a peak in the left third, and decays slowly to the right. The bulk of the area, to the left, is labelled <math alttext="one minus alpha"><mrow><mn>1</mn><mo>−</mo><mi>α</mi></mrow></math>. A short vertical line near the right-hand end marks the critical value, labelled <math alttext="F star with p minus 1 and n minus p degrees of freedom"><msubsup><mi>F</mi><mrow><mi>p</mi><mo>−</mo><mn>1</mn><mo>,</mo><mi>n</mi><mo>−</mo><mi>p</mi></mrow><mo>*</mo></msubsup></math>, and the hatched sliver beyond it has area <math alttext="alpha"><mi>α</mi></math>. The statistic is a ratio of two non-negative mean squares, so it can never be negative, and only large values are evidence against the null — hence a single upper tail even though the null hypothesis is two-sided in each <math alttext="beta sub j"><msub><mi>β</mi><mi>j</mi></msub></math>.</p>
+</details>
+
+<div class="note">
+  <p><strong>Decision.</strong> If <math alttext="F is greater than F star with p minus 1 and n minus p degrees of freedom at one minus alpha"><mrow><mi>F</mi><mo>&gt;</mo><msubsup><mi>F</mi><mrow><mi>p</mi><mo>−</mo><mn>1</mn><mo>,</mo><mi>n</mi><mo>−</mo><mi>p</mi></mrow><mo>*</mo></msubsup><mo>(</mo><mn>1</mn><mo>−</mo><mi>α</mi><mo>)</mo></mrow></math>, reject <math alttext="H naught"><msub><mi>H</mi><mn>0</mn></msub></math>: at least one predictor is a significant predictor of <math alttext="Y"><mi>Y</mi></math>.</p>
+  <p>Note what this does <em>not</em> tell you — which one.</p>
+</div>
+
+<h3>The same statistic, for any reduced versus full pair</h3>
+
+<div class="eq">
+<math display="block" alttext="F equals the quantity S S E reduced minus S S E full, over p minus k, divided by S S E full over n minus p">
+  <mrow>
+    <mi>F</mi><mo>=</mo>
+    <mfrac>
+      <mrow><mo>(</mo><msub><mi>SSE</mi><mi>R</mi></msub><mo>−</mo><msub><mi>SSE</mi><mi>F</mi></msub><mo>)</mo><mo>/</mo><mo>(</mo><mi>p</mi><mo>−</mo><mi>k</mi><mo>)</mo></mrow>
+      <mrow><msub><mi>SSE</mi><mi>F</mi></msub><mo>/</mo><mo>(</mo><mi>n</mi><mo>−</mo><mi>p</mi><mo>)</mo></mrow>
+    </mfrac>
+  </mrow>
+</math>
+</div>
+
+<p class="lede">where <math alttext="k"><mi>k</mi></math> is the number of <math alttext="beta"><mi>β</mi></math>'s in the reduced model. The global test is the special case <math alttext="k equals 1"><mrow><mi>k</mi><mo>=</mo><mn>1</mn></mrow></math> — the reduced model keeps only the intercept.</p>
+
+<h2 id="anova">The ANOVA table</h2>
+
+<p>ANOVA — <em>analysis of variance</em> — is just this comparison laid out as a table.</p>
+
+<div class="tablewrap">
+<table>
+  <caption>ANOVA table for a reduced-versus-full comparison</caption>
+  <thead>
+    <tr>
+      <th scope="col">Source</th>
+      <th scope="col">SS</th>
+      <th scope="col">df</th>
+      <th scope="col">MS</th>
+      <th scope="col">F</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">Regression</th>
+      <td><math alttext="S S E reduced minus S S E full"><mrow><msub><mi>SSE</mi><mi>R</mi></msub><mo>−</mo><msub><mi>SSE</mi><mi>F</mi></msub></mrow></math></td>
+      <td><math alttext="p minus k"><mrow><mi>p</mi><mo>−</mo><mi>k</mi></mrow></math></td>
+      <td><math alttext="S S over p minus k"><mfrac><mi>SS</mi><mrow><mi>p</mi><mo>−</mo><mi>k</mi></mrow></mfrac></math></td>
+      <td rowspan="2" style="vertical-align:middle">
+        <math alttext="the regression mean square divided by the error mean square">
+          <mfrac>
+            <mtext>Regression MS</mtext>
+            <mtext>Error MS</mtext>
+          </mfrac>
+        </math>
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">Error</th>
+      <td><math alttext="S S E full"><msub><mi>SSE</mi><mi>F</mi></msub></math></td>
+      <td><math alttext="n minus p"><mrow><mi>n</mi><mo>−</mo><mi>p</mi></mrow></math></td>
+      <td><math alttext="S S E full over n minus p"><mfrac><msub><mi>SSE</mi><mi>F</mi></msub><mrow><mi>n</mi><mo>−</mo><mi>p</mi></mrow></mfrac></math></td>
+    </tr>
+    <tr>
+      <th scope="row">Total</th>
+      <td><math alttext="S S T"><mi>SST</mi></math></td>
+      <td><math alttext="n minus 1"><mrow><mi>n</mi><mo>−</mo><mn>1</mn></mrow></math></td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="note">
+  <p><span class="tag" style="color:var(--est)">Where F comes from in the table</span> The <math alttext="F"><mi>F</mi></math> column is the Regression mean square divided by the Error mean square — the top row over the middle row. In the original notes this is drawn as two arrows, one from each mean square, meeting at the <math alttext="F"><mi>F</mi></math> column.</p>
+</div>
+
+<h2 id="partial">IV. The partial F-test</h2>
+
+<p>Instead of testing every slope at once, test a <strong>subset</strong> — say the last few, <math alttext="X sub r through X sub p minus 1"><mrow><msub><mi>X</mi><mi>r</mi></msub><mo>,</mo><msub><mi>X</mi><mrow><mi>r</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>,</mo><mo>…</mo><mo>,</mo><msub><mi>X</mi><mrow><mi>p</mi><mo>−</mo><mn>1</mn></mrow></msub></mrow></math>.</p>
+
+<div class="eq">
+<math display="block" alttext="H naught: beta sub r equals beta sub r plus 1 equals dot dot dot equals beta sub p minus 1 equals zero; H one: at least one is not zero">
+  <mtable columnalign="left">
+    <mtr><mtd>
+      <mrow>
+        <msub><mi>H</mi><mn>0</mn></msub><mo>:</mo>
+        <msub><mi>β</mi><mi>r</mi></msub><mo>=</mo><msub><mi>β</mi><mrow><mi>r</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>=</mo><mo>⋯</mo><mo>=</mo><msub><mi>β</mi><mrow><mi>p</mi><mo>−</mo><mn>1</mn></mrow></msub><mo>=</mo><mn>0</mn>
+      </mrow>
+    </mtd></mtr>
+    <mtr><mtd>
+      <mrow>
+        <msub><mi>H</mi><mn>1</mn></msub><mo>:</mo>
+        <mtext>at least one is not </mtext><mn>0</mn>
+      </mrow>
+    </mtd></mtr>
+  </mtable>
+</math>
+</div>
+
+<div class="tablewrap">
+<table>
+  <caption>The partial F-test as reduced versus full</caption>
+  <thead>
+    <tr><th scope="col">Hypothesis</th><th scope="col">Model</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row"><math alttext="H naught"><msub><mi>H</mi><mn>0</mn></msub></math> (reduced)</th>
+      <td><math alttext="y sub i equals beta sub 0 plus beta sub 1 x sub 1 i plus dot dot dot plus beta sub r minus 1 x sub r minus 1 i plus epsilon sub i"><mrow><msub><mi>y</mi><mi>i</mi></msub><mo>=</mo><msub><mi>β</mi><mn>0</mn></msub><mo>+</mo><msub><mi>β</mi><mn>1</mn></msub><msub><mi>x</mi><mrow><mn>1</mn><mi>i</mi></mrow></msub><mo>+</mo><mo>⋯</mo><mo>+</mo><msub><mi>β</mi><mrow><mi>r</mi><mo>−</mo><mn>1</mn></mrow></msub><msub><mi>x</mi><mrow><mo>(</mo><mi>r</mi><mo>−</mo><mn>1</mn><mo>)</mo><mi>i</mi></mrow></msub><mo>+</mo><msub><mi>ε</mi><mi>i</mi></msub></mrow></math></td>
+    </tr>
+    <tr>
+      <th scope="row"><math alttext="H one"><msub><mi>H</mi><mn>1</mn></msub></math> (full)</th>
+      <td><math alttext="y sub i equals beta sub 0 plus beta sub 1 x sub 1 i plus dot dot dot plus beta sub p minus 1 x sub p minus 1 i plus epsilon sub i"><mrow><msub><mi>y</mi><mi>i</mi></msub><mo>=</mo><msub><mi>β</mi><mn>0</mn></msub><mo>+</mo><msub><mi>β</mi><mn>1</mn></msub><msub><mi>x</mi><mrow><mn>1</mn><mi>i</mi></mrow></msub><mo>+</mo><mo>⋯</mo><mo>+</mo><msub><mi>β</mi><mrow><mi>p</mi><mo>−</mo><mn>1</mn></mrow></msub><msub><mi>x</mi><mrow><mo>(</mo><mi>p</mi><mo>−</mo><mn>1</mn><mo>)</mo><mi>i</mi></mrow></msub><mo>+</mo><msub><mi>ε</mi><mi>i</mi></msub></mrow></math></td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="eq">
+<math display="block" alttext="F equals the quantity S S E reduced minus S S E full, over p minus r, divided by S S E full over n minus p, distributed as F with p minus r and n minus p degrees of freedom">
+  <mrow>
+    <mi>F</mi><mo>=</mo>
+    <mfrac>
+      <mrow><mo>(</mo><msub><mi>SSE</mi><mi>R</mi></msub><mo>−</mo><msub><mi>SSE</mi><mi>F</mi></msub><mo>)</mo><mo>/</mo><munder><munder><mrow><mo>(</mo><mi>p</mi><mo>−</mo><mi>r</mi><mo>)</mo></mrow><mo>⏟</mo></munder><mtext>difference in # of βs</mtext></munder></mrow>
+      <mrow><msub><mi>SSE</mi><mi>F</mi></msub><mo>/</mo><mo>(</mo><mi>n</mi><mo>−</mo><mi>p</mi><mo>)</mo></mrow>
+    </mfrac>
+    <mo>∼</mo>
+    <msub><mi>F</mi><mrow><mi>p</mi><mo>−</mo><mi>r</mi><mo>,</mo><mi>n</mi><mo>−</mo><mi>p</mi></mrow></msub>
+  </mrow>
+</math>
+</div>
+
+<div class="note">
+  <p><span class="tag" style="color:var(--pop)">Transcription note</span> The notes use <math alttext="k"><mi>k</mi></math> for "number of <math alttext="beta"><mi>β</mi></math>'s in the reduced model" in the generic formula and the ANOVA table, then <math alttext="r"><mi>r</mi></math> here for the index of the first dropped predictor. These are the same quantity: dropping <math alttext="X sub r"><msub><mi>X</mi><mi>r</mi></msub></math> onward leaves <math alttext="beta sub 0 through beta sub r minus 1"><mrow><msub><mi>β</mi><mn>0</mn></msub><mo>,</mo><mo>…</mo><mo>,</mo><msub><mi>β</mi><mrow><mi>r</mi><mo>−</mo><mn>1</mn></mrow></msub></mrow></math>, which is <math alttext="r"><mi>r</mi></math> coefficients, so <math alttext="k equals r"><mrow><mi>k</mi><mo>=</mo><mi>r</mi></mrow></math> and <math alttext="p minus k equals p minus r"><mrow><mi>p</mi><mo>−</mo><mi>k</mi><mo>=</mo><mi>p</mi><mo>−</mo><mi>r</mi></mrow></math>.</p>
+</div>
+
+<div class="note">
+  <p><strong>Decision.</strong> If <math alttext="F is greater than F star with p minus r and n minus p degrees of freedom at one minus alpha"><mrow><mi>F</mi><mo>&gt;</mo><msubsup><mi>F</mi><mrow><mi>p</mi><mo>−</mo><mi>r</mi><mo>,</mo><mi>n</mi><mo>−</mo><mi>p</mi></mrow><mo>*</mo></msubsup><mo>(</mo><mn>1</mn><mo>−</mo><mi>α</mi><mo>)</mo></mrow></math>, reject <math alttext="H naught"><msub><mi>H</mi><mn>0</mn></msub></math>: at least one of <math alttext="X sub r through X sub p minus 1"><mrow><mo>{</mo><msub><mi>X</mi><mi>r</mi></msub><mo>,</mo><mo>…</mo><mo>,</mo><msub><mi>X</mi><mrow><mi>p</mi><mo>−</mo><mn>1</mn></mrow></msub><mo>}</mo></mrow></math> is a significant predictor of <math alttext="Y"><mi>Y</mi></math> — <strong>conditional on</strong> <math alttext="X sub 1 through X sub r minus 1"><mrow><msub><mi>X</mi><mn>1</mn></msub><mo>,</mo><mo>…</mo><mo>,</mo><msub><mi>X</mi><mrow><mi>r</mi><mo>−</mo><mn>1</mn></mrow></msub></mrow></math> already being in the model.</p>
+  <p>That final clause is the whole point of the word <em>partial</em>. A predictor can look significant on its own and not survive here, or the reverse.</p>
+</div>
+
+<h3>The three tests side by side</h3>
+
+<div class="tablewrap">
+<table>
+  <caption>One statistic, three uses — only the pair of models changes</caption>
+  <thead>
+    <tr>
+      <th scope="col">Test</th>
+      <th scope="col">Reduced model</th>
+      <th scope="col">Numerator df</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">Global F</th>
+      <td>intercept only</td>
+      <td><math alttext="p minus 1"><mrow><mi>p</mi><mo>−</mo><mn>1</mn></mrow></math></td>
+    </tr>
+    <tr>
+      <th scope="row">Partial F (subset)</th>
+      <td>drop <math alttext="X sub r through X sub p minus 1"><mrow><msub><mi>X</mi><mi>r</mi></msub><mo>,</mo><mo>…</mo><mo>,</mo><msub><mi>X</mi><mrow><mi>p</mi><mo>−</mo><mn>1</mn></mrow></msub></mrow></math></td>
+      <td><math alttext="p minus r"><mrow><mi>p</mi><mo>−</mo><mi>r</mi></mrow></math></td>
+    </tr>
+    <tr>
+      <th scope="row">Partial F (one predictor)</th>
+      <td>drop a single <math alttext="X sub j"><msub><mi>X</mi><mi>j</mi></msub></math></td>
+      <td><math alttext="one"><mn>1</mn></math></td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p>The denominator is always <math alttext="S S E full over n minus p"><mrow><msub><mi>SSE</mi><mi>F</mi></msub><mo>/</mo><mo>(</mo><mi>n</mi><mo>−</mo><mi>p</mi><mo>)</mo></mrow></math>, the full model's MSE. With a single dropped predictor the numerator has one degree of freedom, and that <math alttext="F"><mi>F</mi></math> is the square of the <math alttext="t"><mi>t</mi></math> statistic for that coefficient.</p>
+
+</main>
+
+<footer>
+  <p>Transcribed from the handwritten notes <em>LR_week_4_day_2.pdf</em> (9 pages). Equations are MathML; figures are inline SVG with title, description, and an expandable long description. Figure numbering continues from Week 4, Day 1. Conforms to WCAG 2.2 Level AA.</p>
+</footer>
+</div>
+</body>
+</html>
