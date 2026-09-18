@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dummy Variables &amp; Interactions — DSAI 601</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      max-width: 820px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+      color: #222;
+    }
+    a.back { font-size: 0.9rem; color: #1a5fb4; text-decoration: none; }
+    h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+    p.instructions { color: #555; font-size: 0.95rem; margin-top: 0; }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1.25rem;
+      margin: 0.75rem 0 1.25rem;
+      padding: 0.75rem 1rem;
+      background: #f7f7f8;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    .controls label { display: flex; align-items: center; gap: 0.5rem; }
+    .controls input[type="range"] { width: 160px; }
+    .controls button { padding: 0.4rem 0.8rem; font-size: 0.9rem; cursor: pointer; }
+
+    #main-panel { border: 1px solid #ddd; border-radius: 4px; }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.25rem;
+      font-size: 0.85rem;
+      color: #444;
+      margin: 0.6rem 0 1rem;
+    }
+    .legend .swatch { display: inline-flex; align-items: center; gap: 0.4rem; }
+    .legend svg { vertical-align: middle; }
+
+    #equations {
+      font-size: 0.92rem;
+      background: #f7f7f8;
+      border-radius: 6px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1.25rem;
+    }
+    #equations p { margin: 0.4rem 0; }
+    #equations .model-label { font-weight: 600; }
+    #equations .dummy-color { color: #1a5fb4; }
+    #equations .interaction-color { color: #c01c28; }
+    #equations .coding-note { color: #555; font-size: 0.88rem; margin-bottom: 0.75rem; }
+    #equations .sub-equation { margin: 0.25rem 0 0.6rem 1.25rem; color: #444; font-size: 0.9rem; }
+    #equations .group-a-color { color: #1a5fb4; font-weight: 600; }
+    #equations .group-b-color { color: #a85d00; font-weight: 600; }
+
+    #stats { font-size: 0.95rem; margin: 0 0 1.25rem; }
+    #stats .stat { margin-right: 0.5rem; }
+    #stats .stat:not(:last-child)::after { content: " | "; color: #999; font-weight: 400; }
+    #stats .stat-value { font-weight: 600; }
+
+    .point-a { fill: #1a5fb4; }
+    .point-b { fill: #a85d00; }
+    .line-dummy-a { stroke: #1a5fb4; stroke-width: 2; stroke-dasharray: 6 4; fill: none; }
+    .line-dummy-b { stroke: #a85d00; stroke-width: 2; stroke-dasharray: 6 4; fill: none; }
+    .line-interaction-a { stroke: #1a5fb4; stroke-width: 2.5; fill: none; }
+    .line-interaction-b { stroke: #a85d00; stroke-width: 2.5; fill: none; }
+    .axis-label { font-size: 0.75rem; fill: #555; }
+  </style>
+</head>
+<body>
+  <a class="back" href="../../">&larr; All topics</a>
+  <h1>Dummy Variables &amp; Interactions</h1>
+  <p class="instructions">
+    Two groups (circles and triangles) each have their own relationship between x and y.
+    A model with a <strong>dummy variable</strong> for group lets each group have its own
+    intercept but forces the same slope on both — the dashed lines below are always parallel.
+    A model that adds an <strong>interaction</strong> between x and group lets the slopes differ
+    too — the solid lines. Turn up "true slope difference" and watch the dashed lines become a
+    visibly worse fit for both groups, while the solid lines track them correctly.
+  </p>
+
+  <div class="controls">
+    <label>True slope difference (Group B − Group A): <span id="delta1-value">0.00</span>
+      <input type="range" id="delta1" min="-1.5" max="1.5" step="0.05" value="0">
+    </label>
+    <button id="resample">New sample</button>
+  </div>
+
+  <div class="legend">
+    <span class="swatch"><svg width="16" height="16"><circle cx="8" cy="8" r="6" class="point-a"></circle></svg> Group A</span>
+    <span class="swatch"><svg width="16" height="16"><path d="M8,2 L14,13 L2,13 Z" class="point-b"></path></svg> Group B</span>
+    <span class="swatch"><svg width="28" height="12"><line x1="0" y1="6" x2="28" y2="6" stroke="#555" stroke-width="2" stroke-dasharray="6 4"></line></svg> No-interaction fit (forced parallel)</span>
+    <span class="swatch"><svg width="28" height="12"><line x1="0" y1="6" x2="28" y2="6" stroke="#555" stroke-width="2.5"></line></svg> Interaction fit (separate slopes)</span>
+  </div>
+
+  <div id="main-panel"></div>
+
+  <div id="equations">
+    <p class="coding-note">Group is dummy coded as <strong>group = 0 for <span class="group-a-color">Group A</span></strong> and <strong>group = 1 for <span class="group-b-color">Group B</span></strong>.</p>
+
+    <p><span class="model-label dummy-color">No interaction:</span>
+      ŷ = <span id="d-b0">–</span> + <span id="d-b1">–</span>·x + <span id="d-b2">–</span>·group
+      &nbsp;|&nbsp; SSE = <span id="d-sse">–</span>
+    </p>
+    <p class="sub-equation"><span class="group-a-color">Group A</span> (group = 0): ŷ = <span id="d-a-b0">–</span> + <span id="d-a-b1">–</span>·x</p>
+    <p class="sub-equation"><span class="group-b-color">Group B</span> (group = 1): ŷ = <span id="d-b-b0">–</span> + <span id="d-b-b1">–</span>·x</p>
+
+    <p><span class="model-label interaction-color">With interaction:</span>
+      ŷ = <span id="i-b0">–</span> + <span id="i-b1">–</span>·x + <span id="i-b2">–</span>·group + <span id="i-b3">–</span>·(x·group)
+      &nbsp;|&nbsp; SSE = <span id="i-sse">–</span>
+    </p>
+    <p class="sub-equation"><span class="group-a-color">Group A</span> (group = 0): ŷ = <span id="i-a-b0">–</span> + <span id="i-a-b1">–</span>·x</p>
+    <p class="sub-equation"><span class="group-b-color">Group B</span> (group = 1): ŷ = <span id="i-b-b0">–</span> + <span id="i-b-b1">–</span>·x</p>
+  </div>
+
+  <div id="stats" aria-live="polite" aria-atomic="true">
+    <span class="stat">SS reduction from adding the interaction = <span id="ss-reduction" class="stat-value">–</span></span>
+    <span class="stat">(df = 1, out of SSE<sub>no interaction</sub> = <span id="sse-ratio-denom" class="stat-value">–</span>)</span>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
