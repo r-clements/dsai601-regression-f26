@@ -36,12 +36,12 @@ variable selection techniques. Programming language is Python.
 | :---:  | :---:  | :---:  | :---:  | :---: |
 |Week 1| 8/27 | Intro, Simple Linear Regression: parameter estimation | Sec. 1.5 & 1.6 |   |
 |Week 2| 8/31 & 9/3  | SLR: parameter distributions, Confidence intevals | Sec. 1.7, 2.1, 2.2 | HW1 Due |
-|Week 3| 9/7 (No Class - Labor Day; moved to 9/11) & 9/10 & 9/11 | SLR: prediction intervals; sum of squares decomposition; model assumptions and diagnostics; ANOVA and the F-test | 2.4-5, 2.7, 3.1-3 | HW2 Due|
-|Week 4| 9/14 & 9/17 |  Multiple Linear Regression: matrix notation; projection interpretation and geometry of regression| 6.1-6, 7.1-6  | Midterm Exam |
-|Week 5| 9/21 & 9/24 |MLR:  Feature engineering &  Modeling Problems | 3.7, 7.1-6, 8.3 | HW3 Due |
-|Week 6| 9/28 & 10/1 |  Modeling problems: multicollinearity, assumption violations, influential points, outliers, transformations | Ch. 10 | HW4 Due  |
-|Week 7| 10/5 & 10/8 | Regression Pitfalls & Model Selection | 6.8, 8.1-2,  9.1-4| HW 5 Due  |
-|Week 8 | 10/12 & 10/15 | Logistic Regression | Ch. 14 |  Final Exam (10/15) |
+|Week 3| 9/7 (No Class - Labor Day; moved to 9/11) & 9/10 & 9/11 | SLR: prediction intervals; sum of squares decomposition; model assumptions and diagnostics; ANOVA and the F-test | Sec. 2.4-5, 2.7, 3.1-3 | HW2 Due|
+|Week 4| 9/14 & 9/17 |  Multiple Linear Regression: matrix notation; projection interpretation and geometry of regression| Sec. 6.1-6, 7.1-6  | Midterm Exam |
+|Week 5| 9/21 & 9/24 |MLR:  Feature engineering &  Modeling Problems | Sec. 3.7, 7.1-6, 8.1-8.3 | HW3 Due |
+|Week 6| 9/28 & 10/1 |  Modeling problems continued and model selection | Sec. 6.8,  9.1-4, 10.1-10.4 | HW4 Due  |
+|Week 7| 10/5 & 10/8 | Logistic Regression | Sec. 14.1-14.5 | HW 5 Due  |
+|Week 8 | 10/12 & 10/15 | Review |  |  Final Exam (10/15) |
 
 
 ## Course Learning Objectives:
