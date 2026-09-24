@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MLR Fundamentals Quiz — DSAI 601</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;1,6..72,500&family=Public+Sans:wght@400;500;600;700&display=swap">
+  <style>
+    :root {
+      --bg: #faf8f5;
+      --surface: #ffffff;
+      --surface-2: #f3efe9;
+      --text: #1c1a17;
+      --text-muted: #6b6459;
+      --border: #e5ded2;
+      --accent: #17518f;
+      --accent-soft: #e9f0fa;
+      --secondary: #9a5300;
+      --correct: #1e7d32;
+      --correct-soft: #e6f4ea;
+      --incorrect: #b3261e;
+      --incorrect-soft: #fbe9e8;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Public Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+      line-height: 1.5;
+      padding-inline: 20px;
+      padding-block: 0 32px;
+    }
+    h1, h2, .q-text { font-family: "Newsreader", Georgia, serif; text-wrap: balance; }
+
+    a.back { font-size: 0.9rem; color: var(--accent); text-decoration: none; display: inline-block; margin-top: 14px; }
+
+    .wrap { max-width: 760px; margin: 0 auto; }
+
+    header.top {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: rgba(250, 248, 245, 0.92);
+      backdrop-filter: blur(6px);
+      border-bottom: 1px solid var(--border);
+      padding-block: 14px;
+      margin-inline: -20px;
+      padding-inline: 20px;
+    }
+    .top-row {
+      max-width: 760px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .top-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+    .top-title span { color: var(--text-muted); font-weight: 500; }
+    .score-pill {
+      font-family: "Public Sans", sans-serif;
+      font-variant-numeric: tabular-nums;
+      font-size: 0.85rem;
+      font-weight: 600;
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-radius: 999px;
+      padding: 6px 14px;
+      white-space: nowrap;
+    }
+    button.reset-btn {
+      font-family: "Public Sans", sans-serif;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 999px;
+      padding: 6px 12px;
+      cursor: pointer;
+    }
+    button.reset-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    .intro {
+      padding-block: 20px 8px;
+    }
+    h1 { font-size: 1.7rem; font-weight: 600; margin: 0 0 6px; }
+    .intro p { color: var(--text-muted); font-size: 0.95rem; max-width: 62ch; margin: 0; }
+
+    .section-header {
+      margin: 40px 0 4px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--secondary);
+    }
+    .section-eyebrow {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--secondary);
+    }
+    .section-header h2 { font-size: 1.2rem; font-weight: 600; margin: 2px 0 0; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px 22px;
+      margin-top: 16px;
+    }
+    .q-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .q-num {
+      font-family: "Public Sans", sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 6px;
+      padding: 2px 8px;
+      letter-spacing: 0.03em;
+    }
+    .q-type {
+      font-family: "Public Sans", sans-serif;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      letter-spacing: 0.03em;
+    }
+    .q-text {
+      font-size: 1.08rem;
+      font-weight: 500;
+      line-height: 1.45;
+      margin: 0 0 14px;
+    }
+    .options {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .opt {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-align: left;
+      width: 100%;
+      font-family: "Public Sans", sans-serif;
+      font-size: 0.94rem;
+      color: var(--text);
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .opt:hover:not(:disabled) { border-color: var(--accent); }
+    .opt:disabled { cursor: default; }
+    .opt-letter {
+      flex: none;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; font-weight: 700; color: var(--text-muted);
+    }
+    .opt.is-correct { background: var(--correct-soft); border-color: var(--correct); }
+    .opt.is-correct .opt-letter { background: var(--correct); border-color: var(--correct); color: white; }
+    .opt.is-wrong { background: var(--incorrect-soft); border-color: var(--incorrect); }
+    .opt.is-wrong .opt-letter { background: var(--incorrect); border-color: var(--incorrect); color: white; }
+
+    .feedback {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      font-size: 0.92rem;
+      display: none;
+    }
+    .feedback.show { display: block; }
+    .feedback.correct { background: var(--correct-soft); color: var(--text); }
+    .feedback.incorrect { background: var(--incorrect-soft); color: var(--text); }
+    .feedback .verdict {
+      font-family: "Public Sans", sans-serif;
+      font-weight: 700;
+      font-size: 0.8rem;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 4px;
+    }
+    .feedback.correct .verdict { color: var(--correct); }
+    .feedback.incorrect .verdict { color: var(--incorrect); }
+
+    footer {
+      margin-top: 44px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.82rem;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .feedback.show { animation: fadein 0.2s ease-out; }
+    }
+    @keyframes fadein { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a class="back" href="../../">&larr; All topics</a>
+
+    <header class="top">
+      <div class="top-row">
+        <div class="top-title">MLR Fundamentals Quiz <span>&middot; DSAI 601</span></div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div class="score-pill" id="scorePill">0 / 20 answered</div>
+          <button class="reset-btn" id="resetBtn" type="button">Reset</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="intro">
+      <h1>Multiple Linear Regression — Fundamentals Quiz</h1>
+      <p>Twenty questions covering Weeks 4&ndash;5: matrix notation, the hat matrix, the F-test family,
+      adjusted R&sup2;, and feature engineering. Pick an answer to see whether you're right, and why.
+      Your progress is saved in this browser if you close the tab.</p>
+    </div>
+
+    <div id="quiz"></div>
+
+    <footer>DSAI 601 &middot; Regression, Fall 2026 &mdash; based on the Week 4&ndash;5 class notes.</footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
