@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Categorical Predictors, Interactions, and Centering — Week 5, Day 2 | DSAI 601</title>
+<meta name="description" content="Accessible class notes on dummy coding a categorical predictor and reading its coefficients against a reference category, ordinal categorical predictors, interactions between categorical and continuous predictors in all three combinations, the main-effects rule, and centering and standardizing.">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --muted: #4a4a4a;
+    --rule: #c9c9c9;
+    --accent: #0b4f8a;
+    --accent-bg: #eef4fa;
+    --focus: #0b4f8a;
+    --pop: #a4262c;   /* population / true  — 5.9:1 on white */
+    --est: #5b2d8e;   /* estimate / fitted  — 8.5:1 on white */
+    --err: #8a5000;   /* errors / residuals — 5.1:1 on white */
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #f2f2f2; --muted: #cfcfcf; --rule: #555;
+      --accent: #8ab8e0; --accent-bg: #182430; --focus: #8ab8e0;
+      --pop: #ff9f99; --est: #cbb0ff; --err: #f0b458;
+    }
+    body { background: #131313; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 1.0625rem;
+    line-height: 1.65;
+    color: var(--ink);
+    background: #fff;
+  }
+  @media (prefers-color-scheme: dark) { body { background: #131313; } }
+  .wrap { max-width: 46rem; margin: 0 auto; padding: 1.5rem 1.25rem 5rem; }
+  a { color: var(--accent); }
+  a:focus-visible, summary:focus-visible, :focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+  .skip {
+    position: absolute; left: -9999px; top: 0;
+    background: var(--accent); color: #fff;
+    padding: .75rem 1rem; z-index: 10; text-decoration: none;
+  }
+  .skip:focus { left: .5rem; top: .5rem; }
+  h1 { font-size: 1.85rem; line-height: 1.25; margin: 0 0 .25rem; }
+  h2 { font-size: 1.35rem; line-height: 1.3; margin: 2.5rem 0 .5rem;
+       padding-top: .75rem; border-top: 2px solid var(--rule); }
+  h3 { font-size: 1.1rem; margin: 1.75rem 0 .4rem; }
+  p, li { max-width: 42rem; }
+  .lede { color: var(--muted); margin-top: 0; }
+  nav.toc {
+    background: var(--accent-bg); border: 1px solid var(--rule);
+    border-radius: 8px; padding: 1rem 1.25rem; margin: 2rem 0;
+  }
+  nav.toc h2 { font-size: 1.05rem; margin: 0 0 .5rem; border: 0; padding: 0; }
+  nav.toc ol { margin: 0; padding-left: 1.25rem; }
+  nav.toc li { margin: .3rem 0; }
+  nav.toc a { display: inline-block; min-height: 24px; padding: 2px 0; }
+  table { border-collapse: collapse; margin: 1rem 0; width: 100%; }
+  /* wide tables (long model equations) scroll inside their own box so the
+     page itself never scrolls horizontally -- WCAG 1.4.10 reflow */
+  .tablewrap { overflow-x: auto; margin: 1rem 0; }
+  .tablewrap > table { margin: 0; }
+  caption { text-align: left; font-weight: 600; padding-bottom: .5rem; }
+  th, td { border: 1px solid var(--rule); padding: .5rem .7rem; text-align: left; }
+  thead th { background: var(--accent-bg); }
+  td.ref { font-weight: 600; }
+  figure { margin: 1.5rem 0; }
+  figcaption { font-size: .95rem; color: var(--muted); margin-top: .5rem; }
+  svg { max-width: 100%; height: auto; display: block; }
+  details {
+    border: 1px solid var(--rule); border-radius: 6px;
+    padding: .5rem .85rem; margin: .75rem 0; background: var(--accent-bg);
+  }
+  summary { cursor: pointer; font-weight: 600; min-height: 24px; padding: .25rem 0; }
+  details[open] summary { margin-bottom: .5rem; }
+  math { font-size: 1.15em; }
+  math[display="block"] { margin: 1rem 0; overflow-x: auto; overflow-y: hidden; }
+  .eq { margin: 1.25rem 0; }
+  .note {
+    border-left: 4px solid var(--accent); background: var(--accent-bg);
+    padding: .75rem 1rem; margin: 1.25rem 0; border-radius: 0 6px 6px 0;
+  }
+  .note > :first-child { margin-top: 0; }
+  .note > :last-child { margin-bottom: 0; }
+  .caution { border-left-color: var(--pop); }
+  .tag {
+    display: inline-block; font-size: .8rem; font-weight: 700;
+    letter-spacing: .02em; text-transform: uppercase;
+    border: 1px solid currentColor; border-radius: 4px;
+    padding: 0 .4em; white-space: nowrap;
+  }
+  .tag.warn { color: var(--pop); }
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 2px solid var(--rule);
+           color: var(--muted); font-size: .95rem; }
+  ol.steps { padding-left: 1.4rem; }
+  ol.steps > li { margin: .75rem 0; }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+
+<div class="wrap">
+<header>
+  <p class="lede"><strong>DSAI 601 — Regression</strong> · Fall 2026 · Week 5, Day 2</p>
+  <h1>Categorical Predictors, Interactions, and Centering</h1>
+  <p class="lede">Accessible transcription of the handwritten class notes. All equations are marked up in MathML so they can be read by a screen reader, magnified, or rendered in braille. All figures have text descriptions. The original uses highlighter and several pen colours to mark which pieces of a fitted equation are the intercept and which are the slope; here those distinctions are carried by table columns, labelled callouts and words, so none of their meaning depends on colour.</p>
+</header>
+
+<nav class="toc" aria-labelledby="toc-h">
+  <h2 id="toc-h">On this page</h2>
+  <ol>
+    <li><a href="#categorical">I. Categorical predictors</a></li>
+    <li><a href="#fitted-by-region">Fitted value for each region</a></li>
+    <li><a href="#ordinal">Ordinal categorical</a></li>
+    <li><a href="#interactions">II. Interactions</a></li>
+    <li><a href="#cat-cont">Categorical × continuous</a></li>
+    <li><a href="#cont-cont">Continuous × continuous</a></li>
+    <li><a href="#cat-cat">Categorical × categorical</a></li>
+    <li><a href="#main-effects">The main-effects rule</a></li>
+    <li><a href="#centering">III. Centering and standardizing</a></li>
+  </ol>
+</nav>
+
+<main id="main">
+
+<div class="note">
+  <p>This session opens by restating the dummy-coding setup from the end of Week 5, Day 1, then carries it forward into coefficient interpretation, interactions, and centering.</p>
+</div>
+
+<h2 id="categorical">I. Categorical predictors</h2>
+
+<p>A <math alttext="K"><mi>K</mi></math>-level categorical predictor becomes <math alttext="K minus 1"><mrow><mi>K</mi><mo>−</mo><mn>1</mn></mrow></math> dummy variables.</p>
+
+<p>Insurance data, regressing price on region:</p>
+
+<div class="eq">
+<math display="block" alttext="region is the set containing N E, N W, S E, and S W">
+  <mrow>
+    <mtext>region</mtext><mo>=</mo><mo>{</mo>
+    <mtext>NE, NW, SE, SW</mtext>
+    <mo>}</mo>
+  </mrow>
+</math>
+</div>
+
+<p>so <math alttext="K equals 4"><mrow><mi>K</mi><mo>=</mo><mn>4</mn></mrow></math> and region contributes three columns, not four. This is <strong>one-hot encoding</strong>:</p>
+
+<div class="tablewrap">
+<table>
+  <caption>The design matrix <math alttext="X"><mi>X</mi></math>. The final column is not part of <math alttext="X"><mi>X</mi></math>; it names the level each row encodes, which the original notes marked with highlighter.</caption>
+  <thead>
+    <tr>
+      <th scope="col">Intercept</th>
+      <th scope="col">NW</th>
+      <th scope="col">SE</th>
+      <th scope="col">SW</th>
+      <th scope="col">Region this row encodes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>1</td><td>0</td><td>0</td><td>0</td><td class="ref">NE — <strong>reference category</strong></td></tr>
+    <tr><td>1</td><td>1</td><td>0</td><td>0</td><td>NW</td></tr>
+    <tr><td>1</td><td>0</td><td>1</td><td>0</td><td>SE</td></tr>
+    <tr><td>1</td><td>0</td><td>0</td><td>1</td><td>SW</td></tr>
+    <tr><td>⋮</td><td>⋮</td><td>⋮</td><td>⋮</td><td>⋮</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p><strong>Northeast (NE) is called the reference category.</strong> It has no column of its own — a row of zeros across NW, SE and SW <em>is</em> the NE encoding.</p>
+
+<div class="eq">
+<math display="block" alttext="y hat equals beta hat sub 0 plus beta hat sub 1 times N W plus beta hat sub 2 times S E plus beta hat sub 3 times S W">
+  <mrow>
+    <mover><mi>y</mi><mo>^</mo></mover><mo>=</mo>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>+</mo>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mtext>NW</mtext><mo>+</mo>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>2</mn></msub><mtext>SE</mtext><mo>+</mo>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>3</mn></msub><mtext>SW</mtext>
+  </mrow>
+</math>
+</div>
+
+<div class="note">
+  <p><strong>Worked example — an NW observation.</strong> Substitute <math alttext="N W equals 1"><mrow><mtext>NW</mtext><mo>=</mo><mn>1</mn></mrow></math>, <math alttext="S E equals 0"><mrow><mtext>SE</mtext><mo>=</mo><mn>0</mn></mrow></math>, <math alttext="S W equals 0"><mrow><mtext>SW</mtext><mo>=</mo><mn>0</mn></mrow></math>, and everything but <math alttext="beta hat sub 0 plus beta hat sub 1"><mrow><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>+</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub></mrow></math> switches off.</p>
+</div>
+
+<p><math alttext="beta hat sub 0"><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub></math> = mean price for NE.</p>
+
+<h2 id="fitted-by-region">Fitted value for each region</h2>
+
+<div class="tablewrap">
+<table>
+  <caption>Every region's fitted value, and what those come to at <math alttext="beta hat sub 0 equals 50 k"><mrow><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>=</mo><mn>50</mn><mi>k</mi></mrow></math>, <math alttext="beta hat sub 1 equals 5 k"><mrow><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>=</mo><mn>5</mn><mi>k</mi></mrow></math></caption>
+  <thead>
+    <tr>
+      <th scope="col">Region</th>
+      <th scope="col"><math alttext="y hat"><mover><mi>y</mi><mo>^</mo></mover></math></th>
+      <th scope="col">Numeric value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">NE</th>
+      <td><math alttext="beta hat sub 0"><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub></math></td>
+      <td>50k</td>
+    </tr>
+    <tr>
+      <th scope="row">NW</th>
+      <td><math alttext="beta hat sub 0 plus beta hat sub 1"><mrow><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>+</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub></mrow></math></td>
+      <td>55k</td>
+    </tr>
+    <tr>
+      <th scope="row">SE</th>
+      <td><math alttext="beta hat sub 0 plus beta hat sub 2"><mrow><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>+</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>2</mn></msub></mrow></math></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <th scope="row">SW</th>
+      <td><math alttext="beta hat sub 0 plus beta hat sub 3"><mrow><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>+</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>3</mn></msub></mrow></math></td>
+      <td>—</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p>The notes give values only for <math alttext="beta hat sub 0"><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub></math> and <math alttext="beta hat sub 1"><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub></math>, so the last two rows have no number attached.</p>
+
+<div class="note">
+  <p>So <math alttext="beta hat sub j"><msub><mover><mi>β</mi><mo>^</mo></mover><mi>j</mi></msub></math> = <strong>difference in mean of <math alttext="Y"><mi>Y</mi></math> between category <math alttext="j"><mi>j</mi></math> and the reference category</strong> (<math alttext="beta hat sub 0"><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub></math>).</p>
+</div>
+
+<h2 id="ordinal">Ordinal categorical</h2>
+
+<div class="eq">
+<math display="block" alttext="y hat equals beta hat sub 0 plus beta hat sub 1 times educ">
+  <mrow>
+    <mover><mi>y</mi><mo>^</mo></mover><mo>=</mo>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>+</mo>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mtext>educ.</mtext>
+  </mrow>
+</math>
+</div>
+
+<p>Example — education level coded as a single numeric column:</p>
+
+<div class="tablewrap">
+<table>
+  <caption>An ordinal predictor squeezed into one column</caption>
+  <thead>
+    <tr>
+      <th scope="col">Level</th>
+      <th scope="col">Some HS</th>
+      <th scope="col">HS</th>
+      <th scope="col">AA</th>
+      <th scope="col">BA</th>
+      <th scope="col">MA</th>
+      <th scope="col">PhD</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">Code</th>
+      <td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="note caution">
+  <p><span class="tag warn">Caution</span> This implies there's a <strong>distance</strong> between categories — that the step from Some HS to HS is the same size as the step from MA to PhD, and that PhD is six times Some HS.</p>
+</div>
+
+<h2 id="interactions">II. Interactions</h2>
+
+<p>Does the effect of <math alttext="X sub 1"><msub><mi>X</mi><mn>1</mn></msub></math> on <math alttext="Y"><mi>Y</mi></math> depend on the value of <math alttext="X sub 2"><msub><mi>X</mi><mn>2</mn></msub></math>?</p>
+
+<p><strong>Example:</strong> does the effect of age on price depend on region?</p>
+
+<h3 id="cat-cont">Categorical + continuous</h3>
+
+<div class="eq">
+<math display="block" alttext="y hat equals beta hat sub 0 plus beta hat sub 1 times Age plus beta hat sub 2 times Smoker plus beta hat sub 3 times Age times Smoker">
+  <mrow>
+    <mover><mi>y</mi><mo>^</mo></mover><mo>=</mo>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>+</mo>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mtext>Age</mtext><mo>+</mo>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>2</mn></msub><mtext>Smoker</mtext><mo>+</mo>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>3</mn></msub><mrow><mtext>Age</mtext><mo>×</mo><mtext>Smoker</mtext></mrow>
+  </mrow>
+</math>
+</div>
+
+<p>That last term is the <strong>interaction</strong>. Smoker is coded No = 0, Yes = 1.</p>
+
+<p><strong>When Smoker = No = 0</strong>, the last two terms vanish:</p>
+
+<div class="eq">
+<math display="block" alttext="y hat equals beta hat sub 0 plus beta hat sub 1 times Age">
+  <mrow>
+    <mover><mi>y</mi><mo>^</mo></mover><mo>=</mo>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>+</mo>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mtext>Age</mtext>
+  </mrow>
+</math>
+</div>
+
+<p><strong>Otherwise</strong> (Smoker = Yes = 1), collect the constant terms and the Age terms separately:</p>
+
+<div class="eq">
+<math display="block" alttext="y hat equals beta hat sub 0 plus beta hat sub 1 Age plus beta hat sub 2 plus beta hat sub 3 Age, which equals open paren beta hat sub 0 plus beta hat sub 2 close paren plus open paren beta hat sub 1 plus beta hat sub 3 close paren times Age">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd><mover><mi>y</mi><mo>^</mo></mover></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>+</mo>
+          <msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mtext>Age</mtext><mo>+</mo>
+          <msub><mover><mi>β</mi><mo>^</mo></mover><mn>2</mn></msub><mo>+</mo>
+          <msub><mover><mi>β</mi><mo>^</mo></mover><mn>3</mn></msub><mtext>Age</mtext>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>+</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>2</mn></msub><mo>)</mo>
+          <mo>+</mo>
+          <mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>+</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>3</mn></msub><mo>)</mo>
+          <mtext>Age</mtext>
+        </mrow>
+      </mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<p>The original highlights the two bracketed pieces in different colours. Here they are separate columns — the point is that the interaction changes <em>both</em>:</p>
+
+<div class="tablewrap">
+<table>
+  <caption>Different slopes, different intercepts</caption>
+  <thead>
+    <tr>
+      <th scope="col">Smoker</th>
+      <th scope="col">Intercept</th>
+      <th scope="col">Slope on Age</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">No (0)</th>
+      <td><math alttext="beta hat sub 0"><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub></math></td>
+      <td><math alttext="beta hat sub 1"><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub></math></td>
+    </tr>
+    <tr>
+      <th scope="row">Yes (1)</th>
+      <td><math alttext="beta hat sub 0 plus beta hat sub 2"><mrow><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>+</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>2</mn></msub></mrow></math></td>
+      <td><math alttext="beta hat sub 1 plus beta hat sub 3"><mrow><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>+</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>3</mn></msub></mrow></math></td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<figure>
+<svg viewBox="0 0 560 320" role="img" aria-labelledby="fig29-t fig29-d" xmlns="http://www.w3.org/2000/svg">
+  <title id="fig29-t">Price against age for smokers and non-smokers</title>
+  <desc id="fig29-d">Two straight lines on axes of price against age. The solid smoker line starts higher and rises steeply; the dashed non-smoker line starts lower and rises gently. The gap between them widens with age, which is what the interaction term does.</desc>
+  <line x1="90" y1="270" x2="505" y2="270" stroke="currentColor" stroke-width="2"/>
+  <line x1="90" y1="270" x2="90" y2="30" stroke="currentColor" stroke-width="2"/>
+
+  <!-- non-smoker: shallow, low intercept, dashed -->
+  <line x1="90" y1="235" x2="430" y2="210" stroke="var(--est)" stroke-width="3" stroke-dasharray="10 6"/>
+  <!-- smoker: steep, high intercept, solid -->
+  <line x1="90" y1="190" x2="430" y2="82" stroke="var(--pop)" stroke-width="3"/>
+
+  <circle cx="90" cy="235" r="4.5" fill="var(--est)"/>
+  <circle cx="90" cy="190" r="4.5" fill="var(--pop)"/>
+
+  <text x="82" y="240" font-size="14" fill="var(--est)" text-anchor="end">β̂₀</text>
+  <text x="82" y="195" font-size="14" fill="var(--pop)" text-anchor="end">β̂₀+β̂₂</text>
+
+  <text x="437" y="78" font-size="15" fill="var(--pop)">Smoker</text>
+  <text x="437" y="214" font-size="15" fill="var(--est)">Non-smoker</text>
+
+  <text x="96" y="24" font-size="15" fill="currentColor">Price</text>
+  <text x="509" y="290" font-size="15" fill="currentColor">Age</text>
+</svg>
+<figcaption>Figure 29. With an interaction the two groups get their own slope as well as their own intercept, so the lines are not parallel.</figcaption>
+</figure>
+<details>
+  <summary>Long description of Figure 29</summary>
+  <p>Axes with age on the horizontal and price on the vertical. Two straight lines are drawn. The <strong>solid</strong> line, labelled "Smoker", meets the vertical axis at the higher of the two intercepts, marked <math alttext="beta hat sub 0 plus beta hat sub 2"><mrow><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>+</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>2</mn></msub></mrow></math>, and climbs steeply across the plot. The <strong>dashed</strong> line, labelled "Non-smoker", meets the axis lower down at <math alttext="beta hat sub 0"><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub></math> and rises only gently.</p>
+  <p>The two things to read off the picture: the lines start at different heights, which is the <math alttext="beta hat sub 2"><msub><mover><mi>β</mi><mo>^</mo></mover><mn>2</mn></msub></math> term, and they climb at different rates, which is the <math alttext="beta hat sub 3"><msub><mover><mi>β</mi><mo>^</mo></mover><mn>3</mn></msub></math> interaction term. Drop the interaction and the lines would be forced parallel — the group difference would be the same at every age. Because they are not parallel, the vertical gap between them grows with age: smoking costs more at 60 than it does at 20. Solid versus dashed carries the same distinction as the two pen colours in the original.</p>
+</details>
+
+<h3 id="cont-cont">Continuous + continuous</h3>
+
+<div class="eq">
+<math display="block" alttext="y hat equals beta hat sub 0 plus beta hat sub 1 Age plus beta hat sub 2 Income plus beta hat sub 3 Age times Income">
+  <mrow>
+    <mover><mi>y</mi><mo>^</mo></mover><mo>=</mo>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>+</mo>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mtext>Age</mtext><mo>+</mo>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>2</mn></msub><mtext>Income</mtext><mo>+</mo>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>3</mn></msub><mrow><mtext>Age</mtext><mo>×</mo><mtext>Income</mtext></mrow>
+  </mrow>
+</math>
+</div>
+
+<p>Collecting the Age terms:</p>
+
+<div class="eq">
+<math display="block" alttext="open paren beta hat sub 1 plus beta hat sub 3 times Income close paren times Age">
+  <mrow>
+    <mo>(</mo>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>+</mo>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>3</mn></msub><mtext>Income</mtext>
+    <mo>)</mo>
+    <mtext>Age</mtext>
+  </mrow>
+</math>
+</div>
+
+<div class="note">
+  <p>The slope on Age is now a <strong>function of income</strong> — not one number but a different number at every income level.</p>
+</div>
+
+<h3 id="cat-cat">Categorical + categorical</h3>
+
+<div class="eq">
+<math display="block" alttext="y hat equals beta hat sub 0 plus beta hat sub 1 Smoker plus beta hat sub 2 Alcohol plus beta hat sub 3 Smoker times Alcohol">
+  <mrow>
+    <mover><mi>y</mi><mo>^</mo></mover><mo>=</mo>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>+</mo>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mtext>Smoker</mtext><mo>+</mo>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>2</mn></msub><mtext>Alcohol</mtext><mo>+</mo>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mn>3</mn></msub><mrow><mtext>Smoker</mtext><mo>×</mo><mtext>Alcohol</mtext></mrow>
+  </mrow>
+</math>
+</div>
+
+<div class="tablewrap">
+<table>
+  <caption>Fitted value in each of the four cells</caption>
+  <thead>
+    <tr>
+      <th scope="col">Alcohol \ Smoker</th>
+      <th scope="col">No (0)</th>
+      <th scope="col">Yes (1)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">No (0)</th>
+      <td><math alttext="beta hat sub 0"><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub></math></td>
+      <td><math alttext="beta hat sub 0 plus beta hat sub 1"><mrow><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>+</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub></mrow></math></td>
+    </tr>
+    <tr>
+      <th scope="row">Yes (1)</th>
+      <td><math alttext="beta hat sub 0 plus beta hat sub 2"><mrow><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>+</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>2</mn></msub></mrow></math></td>
+      <td><math alttext="beta hat sub 0 plus beta hat sub 2 plus beta hat sub 1 plus beta hat sub 3"><mrow><msub><mover><mi>β</mi><mo>^</mo></mover><mn>0</mn></msub><mo>+</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>2</mn></msub><mo>+</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>+</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>3</mn></msub></mrow></math></td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="note">
+  <p><strong>The additional effect of smoking.</strong> The original braces the <math alttext="beta hat sub 1"><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub></math> in the top-right cell and the <math alttext="beta hat sub 1 plus beta hat sub 3"><mrow><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>+</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>3</mn></msub></mrow></math> in the bottom-right and labels both "additional effect of smoking". Among non-drinkers smoking adds <math alttext="beta hat sub 1"><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub></math>; among drinkers it adds <math alttext="beta hat sub 1 plus beta hat sub 3"><mrow><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub><mo>+</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mn>3</mn></msub></mrow></math>. The gap between those two is exactly <math alttext="beta hat sub 3"><msub><mover><mi>β</mi><mo>^</mo></mover><mn>3</mn></msub></math>.</p>
+</div>
+
+<h2 id="main-effects">The main-effects rule</h2>
+
+<div class="note">
+  <p><strong>Note:</strong> if <math alttext="X sub 1 times X sub 2"><mrow><msub><mi>X</mi><mn>1</mn></msub><mo>×</mo><msub><mi>X</mi><mn>2</mn></msub></mrow></math> is in the model, include the main effects <math alttext="X sub 1"><msub><mi>X</mi><mn>1</mn></msub></math> and <math alttext="X sub 2"><msub><mi>X</mi><mn>2</mn></msub></math>.</p>
+</div>
+
+<p>The rule applies all the way down. A three-way interaction drags in everything beneath it:</p>
+
+<div class="tablewrap">
+<table>
+  <caption>What <math alttext="X sub 1 times X sub 2 times X sub 3"><mrow><msub><mi>X</mi><mn>1</mn></msub><mo>×</mo><msub><mi>X</mi><mn>2</mn></msub><mo>×</mo><msub><mi>X</mi><mn>3</mn></msub></mrow></math> requires</caption>
+  <thead>
+    <tr><th scope="col">Order</th><th scope="col">Terms that must be in the model</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">Main effects</th>
+      <td><math alttext="X sub 1, X sub 2, X sub 3"><mrow><msub><mi>X</mi><mn>1</mn></msub><mo>,</mo><msub><mi>X</mi><mn>2</mn></msub><mo>,</mo><msub><mi>X</mi><mn>3</mn></msub></mrow></math></td>
+    </tr>
+    <tr>
+      <th scope="row">Two-way</th>
+      <td><math alttext="X sub 1 X sub 2, X sub 1 X sub 3, X sub 2 X sub 3"><mrow><msub><mi>X</mi><mn>1</mn></msub><msub><mi>X</mi><mn>2</mn></msub><mo>,</mo><msub><mi>X</mi><mn>1</mn></msub><msub><mi>X</mi><mn>3</mn></msub><mo>,</mo><msub><mi>X</mi><mn>2</mn></msub><msub><mi>X</mi><mn>3</mn></msub></mrow></math></td>
+    </tr>
+    <tr>
+      <th scope="row">Three-way</th>
+      <td><math alttext="X sub 1 X sub 2 X sub 3"><mrow><msub><mi>X</mi><mn>1</mn></msub><msub><mi>X</mi><mn>2</mn></msub><msub><mi>X</mi><mn>3</mn></msub></mrow></math></td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="centering">III. Centering and standardizing</h2>
+
+<h3 id="centering-1">① Centering</h3>
+
+<div class="eq">
+<math display="block" alttext="X sub i minus X bar sub i">
+  <mrow>
+    <msub><mi>X</mi><mi>i</mi></msub><mo>−</mo>
+    <msub><mover><mi>X</mi><mo>‾</mo></mover><mi>i</mi></msub>
+  </mrow>
+</math>
+</div>
+
+<p>Worked on income, with mean income = 50:</p>
+
+<div class="tablewrap">
+<table>
+  <caption>Centering shifts the origin to the mean; spacing between values is untouched</caption>
+  <thead>
+    <tr>
+      <th scope="col">Income</th>
+      <th scope="col">Income<sub>c</sub></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>50k</td><td>0k</td></tr>
+    <tr><td>60k</td><td>10k</td></tr>
+    <tr><td>62k</td><td>12k</td></tr>
+    <tr><td>⋮</td><td>⋮</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p><strong>Do this for interactions.</strong> After centering,</p>
+
+<div class="eq">
+<math display="block" alttext="beta hat sub j equals the effect of X sub j at the average value of X sub j plus 1">
+  <mrow>
+    <msub><mover><mi>β</mi><mo>^</mo></mover><mi>j</mi></msub><mo>=</mo>
+    <mtext>“effect of </mtext><msub><mi>X</mi><mi>j</mi></msub>
+    <mtext> at average value of </mtext><msub><mi>X</mi><mrow><mi>j</mi><mo>+</mo><mn>1</mn></mrow></msub><mtext>”</mtext>
+  </mrow>
+</math>
+</div>
+
+<p>Without centering, the coefficient on <math alttext="X sub j"><msub><mi>X</mi><mi>j</mi></msub></math> in a model with an interaction describes the effect when the other variable is <em>zero</em> — which is often a value that never occurs in the data.</p>
+
+<h3 id="standardizing">② Standardizing</h3>
+
+<div class="eq">
+<math display="block" alttext="Z equals X sub j minus X bar sub j, all over the standard deviation of X sub j">
+  <mrow>
+    <mi>Z</mi><mo>=</mo>
+    <mfrac>
+      <mrow><msub><mi>X</mi><mi>j</mi></msub><mo>−</mo><msub><mover><mi>X</mi><mo>‾</mo></mover><mi>j</mi></msub></mrow>
+      <mrow><mi>sd</mi><mo>(</mo><msub><mi>X</mi><mi>j</mi></msub><mo>)</mo></mrow>
+    </mfrac>
+  </mrow>
+</math>
+</div>
+
+<ul>
+  <li>Puts all <math alttext="X"><mi>X</mi></math>s on the same scale.</li>
+  <li>Each value becomes the <strong>number of standard deviations from the mean</strong>.</li>
+</ul>
+
+<div class="note">
+  <p><strong>Interpretation:</strong> “for each 1-sd increase, <math alttext="y"><mi>y</mi></math> changes by <math alttext="beta"><mi>β</mi></math>.”</p>
+</div>
+
+</main>
+
+<footer>
+  <p>Transcribed from the handwritten notes <em>LR_week5_day_2.pdf</em> (5 pages). Equations are MathML; the figure is inline SVG with title, description, and an expandable long description. Figure numbering continues from Week 5, Day 1. Conforms to WCAG 2.2 Level AA.</p>
+</footer>
+</div>
+</body>
+</html>
