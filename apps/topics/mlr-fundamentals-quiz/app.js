@@ -129,6 +129,49 @@ const QUESTIONS = [
       "Always exactly 2, regardless of K"
     ], correct: 0,
     explain: "Giving all K levels their own column would make those K columns sum to exactly the intercept column (every row has a 1 in exactly one of them), which is the same full-rank problem from question 2 — X<sup>T</sup>X would be singular. One level is absorbed into the intercept with no column of its own — the reference level — and every other coefficient is read as a difference from it." },
+  { section: 2, type: 'mcq',
+    q: "In the notes' example design matrix for a 4-level region predictor (Northeast, Northwest, Southeast, Southwest), how is the Northeast row — the reference level — encoded?",
+    options: [
+      "A 1 in the Intercept column and 0s in every one of the NW, SE, SW dummy columns.",
+      "A 1 in all four columns, including its own \"NE\" column.",
+      "It's simply left out of the data entirely.",
+      "A 1 in the Intercept column and a −1 spread across the other three."
+    ], correct: 0,
+    explain: "Northeast gets no dummy column of its own — a row of all zeros across NW, SE, and SW <em>is</em> the Northeast encoding. That's exactly why it's called the reference level: every other region's coefficient is read as a difference from this all-zeros row." },
+  { section: 2, type: 'mcq',
+    q: "Still regressing price on region (Northeast as reference): how should the coefficient on the Southeast dummy be interpreted?",
+    options: [
+      "As the difference in mean price between Southeast and the reference region, Northeast.",
+      "As the average price for Southeast policyholders, on its own.",
+      "As the total price summed across all Southeast policyholders.",
+      "As the correlation between being in Southeast and price."
+    ], correct: 0,
+    explain: "Every non-reference level's coefficient is read as a <em>difference</em> from whatever got absorbed into the intercept — never as that group's own mean by itself. To get Southeast's actual predicted price, you'd have to add the coefficient back to the intercept: β̂₀ + β̂<sub>SE</sub>." },
+  { section: 2, type: 'tf',
+    q: "Dropping predictors to go from a full model to a nested reduced model can only make SSE larger (or leave it unchanged) — it can never make SSE smaller.",
+    options: ["True", "False"], correct: 0,
+    explain: "Least squares on the full model could always have set the extra coefficients to exactly 0 if that were optimal, so the full model's SSE is never worse than the reduced model's. That's precisely why the partial F-test's numerator, SSE_R − SSE_F, is never negative — and why the whole rejection region sits in one tail." },
+  { section: 2, type: 'tf',
+    q: "A log transform is safe to apply to a column that contains a value of exactly 0, since log(0) is just a very large negative number.",
+    options: ["True", "False"], correct: 1,
+    explain: "log(x) is undefined at x = 0 (and for any negative x) — not just large and negative, but not defined at all. A single zero or negative value anywhere in a column is enough to break a log transform of that column outright, and values just above zero become extreme outliers after transforming." },
+  { section: 2, type: 'tf',
+    q: "The notes' recommended fix for the mechanical correlation between X and X² in a polynomial model is to center X first — that is, use (X − X̄) in place of X before squaring.",
+    options: ["True", "False"], correct: 0,
+    explain: "X and X² are correlated by construction, which is exactly the caution flagged right after the polynomial model is introduced. Centering first is the stated remedy." },
+  { section: 2, type: 'mcq',
+    q: "What is the stated goal of the Box–Cox transformation?",
+    options: [
+      "To make y (or X) closer to Normal.",
+      "To make the errors correlated with one another.",
+      "To remove the intercept from the model.",
+      "To turn a categorical predictor into dummy variables."
+    ], correct: 0,
+    explain: "Box–Cox is a family of power transforms (y raised to λ, or ln y when λ = 0) chosen to make the transformed variable better approximate a Normal distribution — the same underlying goal as reaching for a log transform, just with the exact power chosen from the data rather than fixed in advance." },
+  { section: 2, type: 'tf',
+    q: "In the Box–Cox family, the special case λ = 0 corresponds to the ordinary log transform, ln(y).",
+    options: ["True", "False"], correct: 0,
+    explain: "The Box–Cox definition is piecewise: y^λ when λ ≠ 0, and ln(y) exactly when λ = 0 — log is the limiting case of the power transform as λ approaches zero, not an unrelated alternative." },
 ];
 
 const SECTIONS = [
