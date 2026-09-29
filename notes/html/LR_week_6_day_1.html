@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Modeling Problems: Multicollinearity, Outliers and Leverage — Week 6, Day 1 | DSAI 601</title>
+<meta name="description" content="Accessible class notes on multicollinearity — non-identifiability, inflated coefficient variances, low-power t-tests, order dependence in the sequential ANOVA, detection by correlation matrix and variance inflation factor, and the standard remedies — followed by outliers, influential points and leverage.">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --muted: #4a4a4a;
+    --rule: #c9c9c9;
+    --accent: #0b4f8a;
+    --accent-bg: #eef4fa;
+    --focus: #0b4f8a;
+    --pop: #a4262c;   /* population / true  — 5.9:1 on white */
+    --est: #5b2d8e;   /* estimate / fitted  — 8.5:1 on white */
+    --err: #8a5000;   /* errors / residuals — 5.1:1 on white */
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #f2f2f2; --muted: #cfcfcf; --rule: #555;
+      --accent: #8ab8e0; --accent-bg: #182430; --focus: #8ab8e0;
+      --pop: #ff9f99; --est: #cbb0ff; --err: #f0b458;
+    }
+    body { background: #131313; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 1.0625rem;
+    line-height: 1.65;
+    color: var(--ink);
+    background: #fff;
+  }
+  @media (prefers-color-scheme: dark) { body { background: #131313; } }
+  .wrap { max-width: 46rem; margin: 0 auto; padding: 1.5rem 1.25rem 5rem; }
+  a { color: var(--accent); }
+  a:focus-visible, summary:focus-visible, :focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+  .skip {
+    position: absolute; left: -9999px; top: 0;
+    background: var(--accent); color: #fff;
+    padding: .75rem 1rem; z-index: 10; text-decoration: none;
+  }
+  .skip:focus { left: .5rem; top: .5rem; }
+  h1 { font-size: 1.85rem; line-height: 1.25; margin: 0 0 .25rem; }
+  h2 { font-size: 1.35rem; line-height: 1.3; margin: 2.5rem 0 .5rem;
+       padding-top: .75rem; border-top: 2px solid var(--rule); }
+  h3 { font-size: 1.1rem; margin: 1.75rem 0 .4rem; }
+  p, li { max-width: 42rem; }
+  .lede { color: var(--muted); margin-top: 0; }
+  nav.toc {
+    background: var(--accent-bg); border: 1px solid var(--rule);
+    border-radius: 8px; padding: 1rem 1.25rem; margin: 2rem 0;
+  }
+  nav.toc h2 { font-size: 1.05rem; margin: 0 0 .5rem; border: 0; padding: 0; }
+  nav.toc ol { margin: 0; padding-left: 1.25rem; }
+  nav.toc li { margin: .3rem 0; }
+  nav.toc a { display: inline-block; min-height: 24px; padding: 2px 0; }
+  table { border-collapse: collapse; margin: 1rem 0; width: 100%; }
+  /* wide tables (long model equations) scroll inside their own box so the
+     page itself never scrolls horizontally -- WCAG 1.4.10 reflow */
+  .tablewrap { overflow-x: auto; margin: 1rem 0; }
+  .tablewrap > table { margin: 0; }
+  caption { text-align: left; font-weight: 600; padding-bottom: .5rem; }
+  th, td { border: 1px solid var(--rule); padding: .5rem .7rem; text-align: left; }
+  thead th { background: var(--accent-bg); }
+  td.hi { font-weight: 700; }
+  figure { margin: 1.5rem 0; }
+  figcaption { font-size: .95rem; color: var(--muted); margin-top: .5rem; }
+  svg { max-width: 100%; height: auto; display: block; }
+  details {
+    border: 1px solid var(--rule); border-radius: 6px;
+    padding: .5rem .85rem; margin: .75rem 0; background: var(--accent-bg);
+  }
+  summary { cursor: pointer; font-weight: 600; min-height: 24px; padding: .25rem 0; }
+  details[open] summary { margin-bottom: .5rem; }
+  math { font-size: 1.15em; }
+  math[display="block"] { margin: 1rem 0; overflow-x: auto; overflow-y: hidden; }
+  .eq { margin: 1.25rem 0; }
+  .note {
+    border-left: 4px solid var(--accent); background: var(--accent-bg);
+    padding: .75rem 1rem; margin: 1.25rem 0; border-radius: 0 6px 6px 0;
+  }
+  .note > :first-child { margin-top: 0; }
+  .note > :last-child { margin-bottom: 0; }
+  .caution { border-left-color: var(--pop); }
+  .tag {
+    display: inline-block; font-size: .8rem; font-weight: 700;
+    letter-spacing: .02em; text-transform: uppercase;
+    border: 1px solid currentColor; border-radius: 4px;
+    padding: 0 .4em; white-space: nowrap;
+  }
+  .tag.warn { color: var(--pop); }
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 2px solid var(--rule);
+           color: var(--muted); font-size: .95rem; }
+  ol.steps { padding-left: 1.4rem; }
+  ol.steps > li { margin: .75rem 0; }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+
+<div class="wrap">
+<header>
+  <p class="lede"><strong>DSAI 601 — Regression</strong> · Fall 2026 · Week 6, Day 1</p>
+  <h1>Modeling Problems: Multicollinearity, Outliers and Leverage</h1>
+  <p class="lede">Accessible transcription of the handwritten class notes. All equations are marked up in MathML so they can be read by a screen reader, magnified, or rendered in braille. All figures have text descriptions. Annotations written in a second pen colour in the original — and the highlighter on the correlation matrix — are reproduced here as labelled callouts and table columns, so none of their meaning depends on colour.</p>
+</header>
+
+<nav class="toc" aria-labelledby="toc-h">
+  <h2 id="toc-h">On this page</h2>
+  <ol>
+    <li><a href="#multicol">I. Multicollinearity</a></li>
+    <li><a href="#worked">Same model, different βs</a></li>
+    <li><a href="#consequences">Three consequences</a></li>
+    <li><a href="#symptoms">Symptoms</a></li>
+    <li><a href="#anova-order">Order matters in the sequential ANOVA</a></li>
+    <li><a href="#detection">Detection</a></li>
+    <li><a href="#vif">Variance inflation factor</a></li>
+    <li><a href="#solutions">Solutions</a></li>
+    <li><a href="#outliers">II. Outliers and influential points</a></li>
+  </ol>
+</nav>
+
+<main id="main">
+
+<h2 id="multicol">I. Multicollinearity</h2>
+
+<p><strong>Two or more predictors are highly / perfectly correlated.</strong></p>
+
+<p>Write the design matrix out with its columns named:</p>
+
+<div class="tablewrap">
+<table>
+  <caption>The <math alttext="n by p"><mrow><mi>n</mi><mo>×</mo><mi>p</mi></mrow></math> design matrix <math alttext="X"><mi>X</mi></math>, an intercept column followed by the <math alttext="p minus 1"><mrow><mi>p</mi><mo>−</mo><mn>1</mn></mrow></math> predictor columns</caption>
+  <thead>
+    <tr>
+      <th scope="col">Row</th>
+      <th scope="col">1</th>
+      <th scope="col"><math alttext="X sub 1"><msub><mi>X</mi><mn>1</mn></msub></math></th>
+      <th scope="col"><math alttext="X sub 2"><msub><mi>X</mi><mn>2</mn></msub></math></th>
+      <th scope="col">⋯</th>
+      <th scope="col"><math alttext="X sub p minus 1"><msub><mi>X</mi><mrow><mi>p</mi><mo>−</mo><mn>1</mn></mrow></msub></math></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">1</th><td>1</td>
+      <td><math alttext="X sub 1 1"><msub><mi>X</mi><mn>11</mn></msub></math></td>
+      <td><math alttext="X sub 2 1"><msub><mi>X</mi><mn>21</mn></msub></math></td>
+      <td>⋯</td>
+      <td><math alttext="X sub open paren p minus 1 close paren 1"><msub><mi>X</mi><mrow><mo>(</mo><mi>p</mi><mo>−</mo><mn>1</mn><mo>)</mo><mn>1</mn></mrow></msub></math></td>
+    </tr>
+    <tr>
+      <th scope="row">2</th><td>1</td>
+      <td><math alttext="X sub 1 2"><msub><mi>X</mi><mn>12</mn></msub></math></td>
+      <td><math alttext="X sub 2 2"><msub><mi>X</mi><mn>22</mn></msub></math></td>
+      <td></td><td>⋮</td>
+    </tr>
+    <tr>
+      <th scope="row">⋮</th><td>⋮</td><td>⋮</td><td>⋮</td><td>⋱</td><td></td>
+    </tr>
+    <tr>
+      <th scope="row"><math alttext="n"><mi>n</mi></math></th><td>1</td>
+      <td><math alttext="X sub 1 n"><msub><mi>X</mi><mrow><mn>1</mn><mi>n</mi></mrow></msub></math></td>
+      <td><math alttext="X sub 2 n"><msub><mi>X</mi><mrow><mn>2</mn><mi>n</mi></mrow></msub></math></td>
+      <td>⋯</td>
+      <td><math alttext="X sub open paren p minus 1 close paren n"><msub><mi>X</mi><mrow><mo>(</mo><mi>p</mi><mo>−</mo><mn>1</mn><mo>)</mo><mi>n</mi></mrow></msub></math></td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="note">
+  <p>The original braces the predictor columns and asks: <strong>what if one of these is linearly dependent (a linear combination), or close to it, on the others?</strong></p>
+</div>
+
+<p>Exactly dependent columns look like this:</p>
+
+<div class="eq">
+<math display="block" alttext="X sub 1 equals X sub 2 plus X sub 3; X sub 2 equals 5 X sub 6 plus 7 X sub 7">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd><msub><mi>X</mi><mn>1</mn></msub></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><mrow><msub><mi>X</mi><mn>2</mn></msub><mo>+</mo><msub><mi>X</mi><mn>3</mn></msub></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd><msub><mi>X</mi><mn>2</mn></msub></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><mrow><mn>5</mn><msub><mi>X</mi><mn>6</mn></msub><mo>+</mo><mn>7</mn><msub><mi>X</mi><mn>7</mn></msub></mrow></mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<div class="eq">
+<math display="block" alttext="beta hat equals open paren X transpose X close paren inverse X transpose Y">
+  <mrow>
+    <mover><mi>β</mi><mo>^</mo></mover><mo>=</mo>
+    <msup><mrow><mo>(</mo><msup><mi>X</mi><mi>T</mi></msup><mi>X</mi><mo>)</mo></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup>
+    <msup><mi>X</mi><mi>T</mi></msup><mi>Y</mi>
+  </mrow>
+</math>
+</div>
+
+<p>The notes underline <math alttext="X transpose X"><mrow><msup><mi>X</mi><mi>T</mi></msup><mi>X</mi></mrow></math> and warn that it <strong>might have issues</strong> — that factor is where the whole problem lands.</p>
+
+<h2 id="worked">Same model, different βs</h2>
+
+<p>Take <math alttext="y regressed on X sub 1 and X sub 2"><mrow><mi>y</mi><mo>∼</mo><msub><mi>X</mi><mn>1</mn></msub><mo>+</mo><msub><mi>X</mi><mn>2</mn></msub></mrow></math>, so that <math alttext="Y equals X beta plus epsilon"><mrow><mi>Y</mi><mo>=</mo><mi>X</mi><mi>β</mi><mo>+</mo><mi>ε</mi></mrow></math> with <math alttext="beta is the column vector beta 0, beta 1, beta 2"><mrow><mi>β</mi><mo>=</mo><mo>(</mo><msub><mi>β</mi><mn>0</mn></msub><mo>,</mo><msub><mi>β</mi><mn>1</mn></msub><mo>,</mo><msub><mi>β</mi><mn>2</mn></msub><mo>)</mo></mrow></math> — <strong>but</strong> <math alttext="X sub 2 equals 4 X sub 1"><mrow><msub><mi>X</mi><mn>2</mn></msub><mo>=</mo><mn>4</mn><msub><mi>X</mi><mn>1</mn></msub></mrow></math>.</p>
+
+<p>Suppose we know the truth is <math alttext="beta equals 1, 2, 4"><mrow><mi>β</mi><mo>=</mo><mo>(</mo><mn>1</mn><mo>,</mo><mn>2</mn><mo>,</mo><mn>4</mn><mo>)</mo></mrow></math>. Substituting the dependency:</p>
+
+<div class="eq">
+<math display="block" alttext="y sub i equals 1 plus 2 X 1 i plus 4 X 2 i plus epsilon i, which equals 1 plus 2 X 1 i plus 4 times 4 X 1 i plus epsilon i, which equals 1 plus 18 X 1 i plus 0 times X 2 i plus epsilon i">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd><msub><mi>y</mi><mi>i</mi></msub></mtd><mtd><mo>=</mo></mtd>
+      <mtd><mrow><mn>1</mn><mo>+</mo><mn>2</mn><msub><mi>X</mi><mrow><mn>1</mn><mi>i</mi></mrow></msub><mo>+</mo><mn>4</mn><msub><mi>X</mi><mrow><mn>2</mn><mi>i</mi></mrow></msub><mo>+</mo><msub><mi>ε</mi><mi>i</mi></msub></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd><msub><mi>y</mi><mi>i</mi></msub></mtd><mtd><mo>=</mo></mtd>
+      <mtd><mrow><mn>1</mn><mo>+</mo><mn>2</mn><msub><mi>X</mi><mrow><mn>1</mn><mi>i</mi></mrow></msub><mo>+</mo><mn>4</mn><mo>(</mo><mn>4</mn><msub><mi>X</mi><mrow><mn>1</mn><mi>i</mi></mrow></msub><mo>)</mo><mo>+</mo><msub><mi>ε</mi><mi>i</mi></msub></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd><msub><mi>y</mi><mi>i</mi></msub></mtd><mtd><mo>=</mo></mtd>
+      <mtd><mrow><mn>1</mn><mo>+</mo><mn>18</mn><msub><mi>X</mi><mrow><mn>1</mn><mi>i</mi></mrow></msub><mo>+</mo><mn>0</mn><msub><mi>X</mi><mrow><mn>2</mn><mi>i</mi></mrow></msub><mo>+</mo><msub><mi>ε</mi><mi>i</mi></msub></mrow></mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<p>A third choice does the same thing:</p>
+
+<div class="eq">
+<math display="block" alttext="y sub i equals 1 plus 22 X 1 i minus X 2 i plus epsilon i, which equals 1 plus 22 X 1 i minus 4 X 1 i plus epsilon i, which equals 1 plus 18 X 1 i plus epsilon i">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd><msub><mi>y</mi><mi>i</mi></msub></mtd><mtd><mo>=</mo></mtd>
+      <mtd><mrow><mn>1</mn><mo>+</mo><mn>22</mn><msub><mi>X</mi><mrow><mn>1</mn><mi>i</mi></mrow></msub><mo>−</mo><msub><mi>X</mi><mrow><mn>2</mn><mi>i</mi></mrow></msub><mo>+</mo><msub><mi>ε</mi><mi>i</mi></msub></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd><mtd><mo>=</mo></mtd>
+      <mtd><mrow><mn>1</mn><mo>+</mo><mn>22</mn><msub><mi>X</mi><mrow><mn>1</mn><mi>i</mi></mrow></msub><mo>−</mo><mn>4</mn><msub><mi>X</mi><mrow><mn>1</mn><mi>i</mi></mrow></msub><mo>+</mo><msub><mi>ε</mi><mi>i</mi></msub></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd><mtd><mo>=</mo></mtd>
+      <mtd><mrow><mn>1</mn><mo>+</mo><mn>18</mn><msub><mi>X</mi><mrow><mn>1</mn><mi>i</mi></mrow></msub><mo>+</mo><msub><mi>ε</mi><mi>i</mi></msub></mrow></mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<div class="tablewrap">
+<table>
+  <caption>Three different <math alttext="beta"><mi>β</mi></math> vectors, one identical fitted model</caption>
+  <thead>
+    <tr>
+      <th scope="col"><math alttext="beta"><mi>β</mi></math></th>
+      <th scope="col">Written out</th>
+      <th scope="col">After substituting <math alttext="X sub 2 equals 4 X sub 1"><mrow><msub><mi>X</mi><mn>2</mn></msub><mo>=</mo><mn>4</mn><msub><mi>X</mi><mn>1</mn></msub></mrow></math></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">(1, 2, 4) — the true model</th>
+      <td><math alttext="1 plus 2 X 1 plus 4 X 2"><mrow><mn>1</mn><mo>+</mo><mn>2</mn><msub><mi>X</mi><mn>1</mn></msub><mo>+</mo><mn>4</mn><msub><mi>X</mi><mn>2</mn></msub></mrow></math></td>
+      <td><math alttext="1 plus 18 X 1"><mrow><mn>1</mn><mo>+</mo><mn>18</mn><msub><mi>X</mi><mn>1</mn></msub></mrow></math></td>
+    </tr>
+    <tr>
+      <th scope="row">(1, 18, 0)</th>
+      <td><math alttext="1 plus 18 X 1 plus 0 X 2"><mrow><mn>1</mn><mo>+</mo><mn>18</mn><msub><mi>X</mi><mn>1</mn></msub><mo>+</mo><mn>0</mn><msub><mi>X</mi><mn>2</mn></msub></mrow></math></td>
+      <td><math alttext="1 plus 18 X 1"><mrow><mn>1</mn><mo>+</mo><mn>18</mn><msub><mi>X</mi><mn>1</mn></msub></mrow></math></td>
+    </tr>
+    <tr>
+      <th scope="row">(1, 22, −1)</th>
+      <td><math alttext="1 plus 22 X 1 minus X 2"><mrow><mn>1</mn><mo>+</mo><mn>22</mn><msub><mi>X</mi><mn>1</mn></msub><mo>−</mo><msub><mi>X</mi><mn>2</mn></msub></mrow></math></td>
+      <td><math alttext="1 plus 18 X 1"><mrow><mn>1</mn><mo>+</mo><mn>18</mn><msub><mi>X</mi><mn>1</mn></msub></mrow></math></td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="note caution">
+  <p><span class="tag warn">Key point</span> All three produce <em>exactly</em> the same fitted values, so the data cannot tell them apart. <strong>Which one is right?</strong> There is no answer — and that is the point.</p>
+</div>
+
+<h2 id="consequences">Three consequences</h2>
+
+<h3 id="nonident">① Non-identifiability</h3>
+
+<p><math alttext="beta hat equals open paren X transpose X close paren inverse X transpose Y"><mrow><mover><mi>β</mi><mo>^</mo></mover><mo>=</mo><msup><mrow><mo>(</mo><msup><mi>X</mi><mi>T</mi></msup><mi>X</mi><mo>)</mo></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup><msup><mi>X</mi><mi>T</mi></msup><mi>Y</mi></mrow></math> could be <strong>impossible to calculate</strong>, or very unstable, because of division by <math alttext="approximately zero"><mrow><mo>≈</mo><mn>0</mn></mrow></math>.</p>
+
+<h3 id="inflated">② Inflated variance</h3>
+
+<div class="eq">
+<math display="block" alttext="the variance of beta hat equals sigma squared times open paren X transpose X close paren inverse">
+  <mrow>
+    <mi>Var</mi><mo>(</mo><mover><mi>β</mi><mo>^</mo></mover><mo>)</mo><mo>=</mo>
+    <msup><mi>σ</mi><mn>2</mn></msup>
+    <msup><mrow><mo>(</mo><msup><mi>X</mi><mi>T</mi></msup><mi>X</mi><mo>)</mo></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup>
+  </mrow>
+</math>
+</div>
+
+<p>This <strong>explodes</strong> — the variances of the <math alttext="beta hats"><mover><mi>β</mi><mo>^</mo></mover></math> are inflated. The margin note gives the reason:</p>
+
+<div class="note">
+  <p><span class="tag">Why</span> An inverse is <math alttext="one over the determinant"><mfrac><mn>1</mn><mtext>determinant</mtext></mfrac></math> times a matrix. Near-dependent columns drive the determinant toward zero, and dividing by something near zero blows the whole thing up.</p>
+</div>
+
+<h3 id="inference">③ Inference</h3>
+
+<div class="eq">
+<math display="block" alttext="t equals beta hat sub i minus zero, over the estimated standard error of beta hat sub i">
+  <mrow>
+    <mi>t</mi><mo>=</mo>
+    <mfrac>
+      <mrow><msub><mover><mi>β</mi><mo>^</mo></mover><mi>i</mi></msub><mo>−</mo><mn>0</mn></mrow>
+      <mrow><mover><mi>SE</mi><mo>^</mo></mover><mo>(</mo><msub><mover><mi>β</mi><mo>^</mo></mover><mi>i</mi></msub><mo>)</mo></mrow>
+    </mfrac>
+  </mrow>
+</math>
+</div>
+
+<p>The denominator is squiggle-underlined in the original with the note <strong>“this is huge”</strong>. A huge standard error makes <math alttext="t"><mi>t</mi></math> <strong>always really small — never reject <math alttext="H naught"><msub><mi>H</mi><mn>0</mn></msub></math>. Low power.</strong></p>
+
+<h2 id="symptoms">Symptoms</h2>
+
+<p><strong>Adding a predictor increases the SE of the others, or changes the βs by “a lot”.</strong></p>
+
+<div class="tablewrap">
+<table>
+  <caption>The same two models fitted under low and high correlation between <math alttext="X sub 1"><msub><mi>X</mi><mn>1</mn></msub></math> and <math alttext="X sub 2"><msub><mi>X</mi><mn>2</mn></msub></math></caption>
+  <thead>
+    <tr>
+      <th scope="col">Model</th>
+      <th scope="col"><math alttext="corr of X 1 and X 2 approximately 0"><mrow><mi>corr</mi><mo>≈</mo><mn>0</mn></mrow></math>: <math alttext="beta hat 1"><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub></math></th>
+      <th scope="col"><math alttext="corr approximately 0"><mrow><mi>corr</mi><mo>≈</mo><mn>0</mn></mrow></math>: <math alttext="beta hat 2"><msub><mover><mi>β</mi><mo>^</mo></mover><mn>2</mn></msub></math></th>
+      <th scope="col"><math alttext="corr approximately 1"><mrow><mi>corr</mi><mo>≈</mo><mn>1</mn></mrow></math>: <math alttext="beta hat 1"><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub></math></th>
+      <th scope="col"><math alttext="corr approximately 1"><mrow><mi>corr</mi><mo>≈</mo><mn>1</mn></mrow></math>: <math alttext="beta hat 2"><msub><mover><mi>β</mi><mo>^</mo></mover><mn>2</mn></msub></math></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row"><math alttext="y regressed on X 1"><mrow><mi>y</mi><mo>∼</mo><msub><mi>X</mi><mn>1</mn></msub></mrow></math></th>
+      <td>−1</td><td>—</td><td>−1</td><td>—</td>
+    </tr>
+    <tr>
+      <th scope="row"><math alttext="y regressed on X 1 plus X 2"><mrow><mi>y</mi><mo>∼</mo><msub><mi>X</mi><mn>1</mn></msub><mo>+</mo><msub><mi>X</mi><mn>2</mn></msub></mrow></math></th>
+      <td>−1.1</td><td>−5</td><td class="hi">10</td><td>−4</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p>Under low correlation, adding <math alttext="X sub 2"><msub><mi>X</mi><mn>2</mn></msub></math> nudges <math alttext="beta hat 1"><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub></math> from <math alttext="negative 1"><mrow><mo>−</mo><mn>1</mn></mrow></math> to <math alttext="negative 1.1"><mrow><mo>−</mo><mn>1.1</mn></mrow></math>. Under high correlation the same move sends it from <math alttext="negative 1"><mrow><mo>−</mo><mn>1</mn></mrow></math> to <math alttext="positive 10"><mrow><mo>+</mo><mn>10</mn></mrow></math> — a sign flip and an order of magnitude. That is the symptom.</p>
+
+<h2 id="anova-order">Order matters in the sequential ANOVA</h2>
+
+<figure>
+<svg viewBox="0 0 480 260" role="img" aria-labelledby="fig30-t fig30-d" xmlns="http://www.w3.org/2000/svg">
+  <title id="fig30-t">Two heavily overlapping predictors inside the total variation</title>
+  <desc id="fig30-d">A rectangle labelled SST contains two circles, X1 drawn with a solid outline and X2 with a dashed outline. They overlap almost completely, so the shared region is far larger than either private sliver.</desc>
+  <rect x="30" y="30" width="360" height="200" fill="none" stroke="currentColor" stroke-width="2.5"/>
+  <text x="398" y="40" font-size="15" fill="currentColor">SST</text>
+  <ellipse cx="175" cy="130" rx="85" ry="70" fill="none" stroke="var(--est)" stroke-width="3"/>
+  <ellipse cx="215" cy="130" rx="85" ry="70" fill="none" stroke="var(--pop)" stroke-width="3" stroke-dasharray="9 6"/>
+  <text x="112" y="58" font-size="15" fill="var(--est)">X₁ (solid)</text>
+  <text x="252" y="58" font-size="15" fill="var(--pop)">X₂ (dashed)</text>
+  <text x="195" y="136" font-size="14" fill="currentColor" text-anchor="middle">shared</text>
+</svg>
+<figcaption>Figure 30. When two predictors overlap this heavily, almost all of the explained variation is shared — and whichever one enters the model first collects it.</figcaption>
+</figure>
+<details>
+  <summary>Long description of Figure 30</summary>
+  <p>A rectangle stands for the total variation in <math alttext="y"><mi>y</mi></math>, <math alttext="S S T"><mi>SST</mi></math>, labelled at its top-right corner. Inside sit two circles of the same size, offset only slightly from one another: <math alttext="X sub 1"><msub><mi>X</mi><mn>1</mn></msub></math> with a solid outline on the left and <math alttext="X sub 2"><msub><mi>X</mi><mn>2</mn></msub></math> with a dashed outline on the right. Their overlap, marked "shared", takes up nearly the whole of both circles; each keeps only a thin crescent to itself.</p>
+  <p>The sequential ANOVA attributes that shared region entirely to whichever predictor is entered first. Solid versus dashed carries the same distinction as the two pen colours in the original.</p>
+</details>
+
+<p>Enter <math alttext="X sub 1"><msub><mi>X</mi><mn>1</mn></msub></math> first and it takes the shared region; <math alttext="X sub 2"><msub><mi>X</mi><mn>2</mn></msub></math> is left with its crescent:</p>
+
+<div class="tablewrap">
+<table>
+  <caption>Sequential ANOVA with <math alttext="X sub 1"><msub><mi>X</mi><mn>1</mn></msub></math> entered first</caption>
+  <thead>
+    <tr><th scope="col">Predictor</th><th scope="col">SS</th><th scope="col">F</th><th scope="col">p-value</th><th scope="col">Verdict</th></tr>
+  </thead>
+  <tbody>
+    <tr><th scope="row"><math alttext="X sub 1"><msub><mi>X</mi><mn>1</mn></msub></math></th><td>large</td><td>up</td><td>down</td><td class="hi">significant</td></tr>
+    <tr><th scope="row"><math alttext="X sub 2"><msub><mi>X</mi><mn>2</mn></msub></math></th><td>small</td><td>down</td><td>up</td><td>not significant</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>Swap the order and the verdicts swap with it:</p>
+
+<div class="tablewrap">
+<table>
+  <caption>Sequential ANOVA with <math alttext="X sub 2"><msub><mi>X</mi><mn>2</mn></msub></math> entered first — same data, same diagram</caption>
+  <thead>
+    <tr><th scope="col">Predictor</th><th scope="col">SS</th><th scope="col">F</th><th scope="col">p-value</th><th scope="col">Verdict</th></tr>
+  </thead>
+  <tbody>
+    <tr><th scope="row"><math alttext="X sub 2"><msub><mi>X</mi><mn>2</mn></msub></math></th><td>large</td><td>up</td><td>down</td><td class="hi">significant</td></tr>
+    <tr><th scope="row"><math alttext="X sub 1"><msub><mi>X</mi><mn>1</mn></msub></math></th><td>small</td><td>down</td><td>up</td><td>not significant</td></tr>
+  </tbody>
+</table>
+</div>
+
+<figure>
+<svg viewBox="0 0 480 260" role="img" aria-labelledby="fig31-t fig31-d" xmlns="http://www.w3.org/2000/svg">
+  <title id="fig31-t">A third predictor overlapping only partially</title>
+  <desc id="fig31-d">The same SST rectangle with the heavily overlapping X1 and X2 circles, plus a third region X3 drawn with a dotted outline that overlaps them only at one edge and keeps most of its own area.</desc>
+  <rect x="20" y="25" width="380" height="210" fill="none" stroke="currentColor" stroke-width="2.5"/>
+  <text x="408" y="35" font-size="15" fill="currentColor">SST</text>
+  <ellipse cx="130" cy="115" rx="72" ry="62" fill="none" stroke="var(--est)" stroke-width="3"/>
+  <ellipse cx="160" cy="115" rx="72" ry="62" fill="none" stroke="var(--pop)" stroke-width="3" stroke-dasharray="9 6"/>
+  <ellipse cx="258" cy="160" rx="78" ry="58" fill="none" stroke="var(--err)" stroke-width="3" stroke-dasharray="2 5"/>
+  <text x="74" y="46" font-size="15" fill="var(--est)">X₁ (solid)</text>
+  <text x="196" y="46" font-size="15" fill="var(--pop)">X₂ (dashed)</text>
+  <text x="300" y="228" font-size="15" fill="var(--err)">X₃ (dotted)</text>
+</svg>
+<figcaption>Figure 31. A third predictor that overlaps only slightly keeps most of its own explanatory territory, so its sequential and partial sums of squares barely differ.</figcaption>
+</figure>
+<details>
+  <summary>Long description of Figure 31</summary>
+  <p>The same <math alttext="S S T"><mi>SST</mi></math> rectangle. On the left, <math alttext="X sub 1"><msub><mi>X</mi><mn>1</mn></msub></math> (solid outline) and <math alttext="X sub 2"><msub><mi>X</mi><mn>2</mn></msub></math> (dashed outline) sit almost on top of one another as before. Lower and to the right, a third region <math alttext="X sub 3"><msub><mi>X</mi><mn>3</mn></msub></math> (dotted outline) just clips the edge of that pair and keeps most of its area to itself.</p>
+  <p>The contrast is the lesson: <math alttext="X sub 3"><msub><mi>X</mi><mn>3</mn></msub></math> contributes something no other predictor can, so its contribution is stable no matter where it is entered, while <math alttext="X sub 1"><msub><mi>X</mi><mn>1</mn></msub></math> and <math alttext="X sub 2"><msub><mi>X</mi><mn>2</mn></msub></math> are fighting over the same region. Solid, dashed and dotted carry the same distinction as the three pen colours in the original.</p>
+</details>
+
+<h2 id="detection">Detection</h2>
+
+<h3 id="cormat">① Correlation matrix</h3>
+
+<div class="tablewrap">
+<table>
+  <caption>Pairwise correlations among the predictors; the flagged pair is set in bold</caption>
+  <thead>
+    <tr>
+      <th scope="col"></th>
+      <th scope="col"><math alttext="X sub 1"><msub><mi>X</mi><mn>1</mn></msub></math></th>
+      <th scope="col"><math alttext="X sub 2"><msub><mi>X</mi><mn>2</mn></msub></math></th>
+      <th scope="col"><math alttext="X sub 3"><msub><mi>X</mi><mn>3</mn></msub></math></th>
+      <th scope="col"><math alttext="X sub 4"><msub><mi>X</mi><mn>4</mn></msub></math></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><th scope="row"><math alttext="X sub 1"><msub><mi>X</mi><mn>1</mn></msub></math></th><td>1</td><td class="hi">.9</td><td>.2</td><td>⋮</td></tr>
+    <tr><th scope="row"><math alttext="X sub 2"><msub><mi>X</mi><mn>2</mn></msub></math></th><td class="hi">.9</td><td>1</td><td>.3</td><td>⋮</td></tr>
+    <tr><th scope="row"><math alttext="X sub 3"><msub><mi>X</mi><mn>3</mn></msub></math></th><td>.2</td><td>.3</td><td>1</td><td></td></tr>
+    <tr><th scope="row"><math alttext="X sub 4"><msub><mi>X</mi><mn>4</mn></msub></math></th><td></td><td colspan="2">⋯</td><td>1</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="note">
+  <p>The original highlights both <math alttext="point 9"><mn>.9</mn></math> entries. Verdict: <strong>drop one of <math alttext="X sub 1"><msub><mi>X</mi><mn>1</mn></msub></math> or <math alttext="X sub 2"><msub><mi>X</mi><mn>2</mn></msub></math></strong>.</p>
+</div>
+
+<h2 id="vif">② Variance inflation factor (VIF)</h2>
+
+<p>VIF measures the inflation of the variance of <math alttext="beta hat sub j"><msub><mover><mi>β</mi><mo>^</mo></mover><mi>j</mi></msub></math> when you add <math alttext="X sub j"><msub><mi>X</mi><mi>j</mi></msub></math> to the model.</p>
+
+<div class="eq">
+<math display="block" alttext="V I F equals one over one minus R squared sub j">
+  <mrow>
+    <mi>VIF</mi><mo>=</mo>
+    <mfrac>
+      <mn>1</mn>
+      <mrow><mn>1</mn><mo>−</mo><msubsup><mi>R</mi><mi>j</mi><mn>2</mn></msubsup></mrow>
+    </mfrac>
+  </mrow>
+</math>
+</div>
+
+<p>where <math alttext="R squared sub j"><msubsup><mi>R</mi><mi>j</mi><mn>2</mn></msubsup></math> is the <math alttext="R squared"><msup><mi>R</mi><mn>2</mn></msup></math> from regressing <math alttext="X sub j"><msub><mi>X</mi><mi>j</mi></msub></math> on every <em>other</em> predictor:</p>
+
+<div class="eq">
+<math display="block" alttext="X sub j regressed on X 1 plus X 2 plus dot dot dot plus X j minus 1 plus X j plus 1 plus dot dot dot plus X p minus 1">
+  <mrow>
+    <msub><mi>X</mi><mi>j</mi></msub><mo>∼</mo>
+    <msub><mi>X</mi><mn>1</mn></msub><mo>+</mo>
+    <msub><mi>X</mi><mn>2</mn></msub><mo>+</mo><mo>⋯</mo><mo>+</mo>
+    <msub><mi>X</mi><mrow><mi>j</mi><mo>−</mo><mn>1</mn></mrow></msub><mo>+</mo>
+    <msub><mi>X</mi><mrow><mi>j</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>+</mo><mo>⋯</mo><mo>+</mo>
+    <msub><mi>X</mi><mrow><mi>p</mi><mo>−</mo><mn>1</mn></mrow></msub>
+  </mrow>
+</math>
+</div>
+
+<ul>
+  <li>If <math alttext="R squared sub j"><msubsup><mi>R</mi><mi>j</mi><mn>2</mn></msubsup></math> is high, <math alttext="X sub j"><msub><mi>X</mi><mi>j</mi></msub></math> is close to a linear combination of the other predictors, and VIF goes <strong>up</strong>.</li>
+  <li>If <math alttext="V I F equals 1"><mrow><mi>VIF</mi><mo>=</mo><mn>1</mn></mrow></math>, there is <strong>no correlation</strong> with the other predictors.</li>
+</ul>
+
+<div class="tablewrap">
+<table>
+  <caption>Rules of thumb</caption>
+  <thead>
+    <tr><th scope="col">Range</th><th scope="col">Severity</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row"><math alttext="1 is less than or equal to V I F is less than or equal to 4"><mrow><mn>1</mn><mo>≤</mo><mi>VIF</mi><mo>≤</mo><mn>4</mn></mrow></math></th>
+      <td>light</td>
+    </tr>
+    <tr>
+      <th scope="row"><math alttext="4 is less than V I F is less than or equal to 10"><mrow><mn>4</mn><mo>&lt;</mo><mi>VIF</mi><mo>≤</mo><mn>10</mn></mrow></math></th>
+      <td>moderate</td>
+    </tr>
+    <tr>
+      <th scope="row"><math alttext="V I F greater than 10"><mrow><mi>VIF</mi><mo>&gt;</mo><mn>10</mn></mrow></math></th>
+      <td>severe</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="solutions">Solutions</h2>
+
+<ol class="steps">
+  <li><strong>Drop</strong> a correlated predictor, keep one.</li>
+  <li><strong>Feature engineering</strong> — build <math alttext="X star equals g of the correlated X s"><mrow><msup><mi>X</mi><mo>*</mo></msup><mo>=</mo><mi>g</mi><mo>(</mo><mtext>correlated </mtext><mi>X</mi><mtext>s</mtext><mo>)</mo></mrow></math>.</li>
+  <li><strong>Regularized regression</strong> — LASSO, Ridge.</li>
+  <li><strong>Partial least squares.</strong></li>
+  <li><strong>PCA.</strong></li>
+</ol>
+
+<div class="note">
+  <p>The original brackets items 3 through 5 in the margin as <strong>“Intro to ML / advanced ML”</strong> — flagged as material for a later course rather than this one.</p>
+</div>
+
+<h2 id="outliers">II. Outliers and influential points</h2>
+
+<h3 id="leverage">Leverage</h3>
+
+<div class="eq">
+<math display="block" alttext="Y hat equals H Y, where H is n by n and Y is n by 1">
+  <mrow>
+    <mover><mi>Y</mi><mo>^</mo></mover><mo>=</mo>
+    <munder><mi>H</mi><mrow><mi>n</mi><mo>×</mo><mi>n</mi></mrow></munder>
+    <munder><mi>Y</mi><mrow><mi>n</mi><mo>×</mo><mn>1</mn></mrow></munder>
+  </mrow>
+</math>
+</div>
+
+<p>Taking the <math alttext="i th"><mi>i</mi></math>th row of <math alttext="H"><mi>H</mi></math> against the whole of <math alttext="Y"><mi>Y</mi></math>:</p>
+
+<div class="eq">
+<math display="block" alttext="y hat sub i equals h i 1 y 1 plus h i 2 y 2 plus dot dot dot plus h i n y n">
+  <mrow>
+    <msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub><mo>=</mo>
+    <msub><mi>h</mi><mrow><mi>i</mi><mn>1</mn></mrow></msub><msub><mi>y</mi><mn>1</mn></msub><mo>+</mo>
+    <msub><mi>h</mi><mrow><mi>i</mi><mn>2</mn></mrow></msub><msub><mi>y</mi><mn>2</mn></msub><mo>+</mo>
+    <mo>⋯</mo><mo>+</mo>
+    <msub><mi>h</mi><mrow><mi>i</mi><mi>n</mi></mrow></msub><msub><mi>y</mi><mi>n</mi></msub>
+  </mrow>
+</math>
+</div>
+
+<p>So <math alttext="h sub i i"><msub><mi>h</mi><mrow><mi>i</mi><mi>i</mi></mrow></msub></math> = the influence of <math alttext="y sub i"><msub><mi>y</mi><mi>i</mi></msub></math> on <math alttext="y hat sub i"><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub></math>.</p>
+
+<div class="note">
+  <p><math alttext="h sub i i"><msub><mi>h</mi><mrow><mi>i</mi><mi>i</mi></mrow></msub></math> is the <strong>leverage</strong> of the <math alttext="i th"><mi>i</mi></math>th point, and is a measure of the distance between the <math alttext="X"><mi>X</mi></math>s at the <math alttext="i th"><mi>i</mi></math>th point and the average <math alttext="X"><mi>X</mi></math>s.</p>
+</div>
+
+<p>In SLR that distance is explicit:</p>
+
+<div class="eq">
+<math display="block" alttext="h sub i i equals one over n plus, X sub i minus x bar, squared, over S S X">
+  <mrow>
+    <msub><mi>h</mi><mrow><mi>i</mi><mi>i</mi></mrow></msub><mo>=</mo>
+    <mfrac><mn>1</mn><mi>n</mi></mfrac><mo>+</mo>
+    <mfrac>
+      <msup><mrow><mo>(</mo><msub><mi>X</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow><mn>2</mn></msup>
+      <mi>SSX</mi>
+    </mfrac>
+  </mrow>
+</math>
+</div>
+
+<h3 id="properties">Properties of <math alttext="h sub i i"><msub><mi>h</mi><mrow><mi>i</mi><mi>i</mi></mrow></msub></math></h3>
+
+<ol class="steps">
+  <li><math alttext="zero is less than or equal to h i i is less than or equal to one"><mrow><mn>0</mn><mo>≤</mo><msub><mi>h</mi><mrow><mi>i</mi><mi>i</mi></mrow></msub><mo>≤</mo><mn>1</mn></mrow></math></li>
+  <li><math alttext="the sum over i of h i i equals p, and h bar equals p over n"><mrow><munder><mo>∑</mo><mi>i</mi></munder><msub><mi>h</mi><mrow><mi>i</mi><mi>i</mi></mrow></msub><mo>=</mo><mi>p</mi><mo>,</mo><mspace width="1em"/><mover><mi>h</mi><mo>‾</mo></mover><mo>=</mo><mfrac><mi>p</mi><mi>n</mi></mfrac></mrow></math></li>
+</ol>
+
+<div class="note caution">
+  <p><span class="tag warn">Rule of thumb</span> High leverage: <math alttext="h i i greater than 3 p over n"><mrow><msub><mi>h</mi><mrow><mi>i</mi><mi>i</mi></mrow></msub><mo>&gt;</mo><mn>3</mn><mfrac><mi>p</mi><mi>n</mi></mfrac></mrow></math> — three times the average leverage.</p>
+</div>
+
+<figure>
+<svg viewBox="0 0 520 320" role="img" aria-labelledby="fig32-t fig32-d" xmlns="http://www.w3.org/2000/svg">
+  <title id="fig32-t">One high-leverage point flattening the fitted line</title>
+  <desc id="fig32-d">A scatter of eight points on the left with two fitted lines through them: a dotted steep line, labelled "without it", fitted to the cluster alone, and a solid much flatter line, labelled "with it", fitted once the isolated point at the far right is included. That point is circled and sits far below where the dotted line would reach.</desc>
+  <line x1="60" y1="250" x2="480" y2="250" stroke="currentColor" stroke-width="2"/>
+  <line x1="60" y1="250" x2="60" y2="30" stroke="currentColor" stroke-width="2"/>
+  <text x="66" y="24" font-size="15" fill="currentColor">y</text>
+  <text x="486" y="256" font-size="15" fill="currentColor">x</text>
+
+  <!-- fit WITHOUT the high-leverage point: steep, dotted (slope 2.00) -->
+  <line x1="84.9" y1="231" x2="242.5" y2="36.8" stroke="var(--est)" stroke-width="3" stroke-dasharray="3 6"/>
+  <!-- fit WITH it: flattened to slope 0.33, solid -->
+  <line x1="81.4" y1="165.3" x2="444.7" y2="92.3" stroke="var(--est)" stroke-width="3"/>
+
+  <!-- the bulk of the data -->
+  <g fill="currentColor">
+    <circle cx="95.1" cy="214.7" r="4"/>
+    <circle cx="112.3" cy="202" r="4"/>
+    <circle cx="129.4" cy="172.4" r="4"/>
+    <circle cx="146.5" cy="161.9" r="4"/>
+    <circle cx="163.7" cy="128.1" r="4"/>
+    <circle cx="180.8" cy="117.6" r="4"/>
+    <circle cx="198" cy="88" r="4"/>
+    <circle cx="215.1" cy="71.1" r="4"/>
+  </g>
+  <!-- the high-leverage point -->
+  <circle cx="420.7" cy="145" r="5" fill="var(--pop)"/>
+  <ellipse cx="420.7" cy="145" rx="18" ry="15" fill="none" stroke="var(--pop)" stroke-width="2.5"/>
+  <line x1="420.7" y1="128" x2="408" y2="196" stroke="var(--pop)" stroke-width="1.5"/>
+  <text x="404" y="214" font-size="14" fill="var(--pop)" text-anchor="middle">high leverage</text>
+
+  <text x="248" y="34" font-size="14" fill="var(--est)">without it</text>
+  <text x="440" y="84" font-size="14" fill="var(--est)" text-anchor="end">with it</text>
+</svg>
+<figcaption>Figure 32. A single point far out in <math alttext="x"><mi>x</mi></math> can swing the fitted line on its own, even though it is only one observation out of <math alttext="n"><mi>n</mi></math>.</figcaption>
+</figure>
+<details>
+  <summary>Long description of Figure 32</summary>
+  <p>Axes of <math alttext="y"><mi>y</mi></math> against <math alttext="x"><mi>x</mi></math>. Eight observations cluster in the left half of the plot and trend upward steeply. One further observation sits far out to the right, circled, and well below the level the cluster's trend would predict for it.</p>
+  <p>Two fitted lines are drawn, both least-squares fits to the plotted data. The <strong>dotted</strong> line, labelled "without it", is the fit to the cluster alone — it is steep, with a slope of about 2, and passes through the middle of the cluster. The <strong>solid</strong> line, labelled "with it", is the fit to all nine points, and its slope collapses to about 0.3: it is dragged down at the right by the single distant observation and lifted at the left as a consequence, so it now misses the cluster entirely.</p>
+  <p>The isolated point has high leverage because its <math alttext="x"><mi>x</mi></math> value is far from <math alttext="x bar"><mover><mi>x</mi><mo>‾</mo></mover></math>, which is exactly what the <math alttext="X sub i minus x bar squared over S S X"><mfrac><msup><mrow><mo>(</mo><msub><mi>X</mi><mi>i</mi></msub><mo>−</mo><mover><mi>x</mi><mo>‾</mo></mover><mo>)</mo></mrow><mn>2</mn></msup><mi>SSX</mi></mfrac></math> term measures. Dotted versus solid carries the same distinction as the two line styles in the original.</p>
+</details>
+
+</main>
+
+<footer>
+  <p>Transcribed from the handwritten notes <em>LR_week_6_day_1.pdf</em> (6 pages). Equations are MathML; figures are inline SVG with title, description, and an expandable long description. Figure numbering continues from Week 5, Day 2. Conforms to WCAG 2.2 Level AA.</p>
+</footer>
+</div>
+</body>
+</html>
