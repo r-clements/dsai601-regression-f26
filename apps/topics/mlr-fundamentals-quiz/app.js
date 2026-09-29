@@ -172,12 +172,42 @@ const QUESTIONS = [
     q: "In the Box–Cox family, the special case λ = 0 corresponds to the ordinary log transform, ln(y).",
     options: ["True", "False"], correct: 0,
     explain: "The Box–Cox definition is piecewise: y^λ when λ ≠ 0, and ln(y) exactly when λ = 0 — log is the limiting case of the power transform as λ approaches zero, not an unrelated alternative." },
+
+  // ---- Week 6, Day 1 ----
+  { section: 3, type: 'mcq',
+    q: "Suppose the true model is y = 1 + 2X1 + 4X2 + ε, but X2 = 4X1 exactly. Substituting that dependency shows β = (1, 2, 4), β = (1, 18, 0), and β = (1, 22, −1) all reduce to the same fitted equation, 1 + 18X1. What does this illustrate?",
+    options: [
+      "Perfect collinearity means the data can't distinguish among infinitely many β vectors — there's no unique least-squares solution.",
+      "The three β vectors are all equally valid estimates of the true effect of X1 alone.",
+      "X2 has no real effect on y, since dropping it from the equation doesn't change the fit.",
+      "The model is fine as long as you pick whichever of the three β vectors has the smallest coefficients."
+    ], correct: 0,
+    explain: "Because X2 = 4X1 exactly, every one of those β vectors produces identical fitted values, residuals, and SSE once you substitute the dependency in — the data literally cannot tell them apart. That's not a matter of picking a favorite; (X<sup>T</sup>X) is singular here, so (X<sup>T</sup>X)<sup>−1</sup> doesn't exist and there is no unique answer at all." },
+  { section: 3, type: 'mcq',
+    q: "A predictor Xⱼ has Rⱼ² = 0.96 when regressed on all the other predictors in the model. What is its VIF, and how does that classify under the rule of thumb from the notes?",
+    options: [
+      "VIF = 1 / (1 − 0.96) = 25 — severe (VIF > 10).",
+      "VIF = 0.96 — moderate (4 < VIF ≤ 10).",
+      "VIF = 1 − 0.96 = 0.04 — light, since it's below 1.",
+      "VIF = 25 — light, since VIF only becomes a concern above 100."
+    ], correct: 0,
+    explain: "VIF<sub>j</sub> = 1 / (1 − R<sub>j</sub>²), so R<sub>j</sub>² = 0.96 gives VIF = 1/0.04 = 25. The notes' thresholds are 1–4 light, 4–10 moderate, and anything past 10 severe — 25 is well into severe territory, meaning Var(β̂<sub>j</sub>) is inflated 25-fold versus what it would be if X<sub>j</sub> carried no correlation with the rest of the predictors." },
+  { section: 3, type: 'mcq',
+    q: "The diagonal entries hᵢᵢ of the hat matrix H are called the leverage of point i. Which of the following is <strong>not</strong> one of the properties given in the notes?",
+    options: [
+      "A point is automatically flagged as high-leverage whenever hᵢᵢ exceeds 0.5.",
+      "0 ≤ hᵢᵢ ≤ 1 for every observation.",
+      "The hᵢᵢ values sum to p across all n observations, so the average leverage is p/n.",
+      "hᵢᵢ measures how far the ith observation's X-values sit from the average of the X's."
+    ], correct: 0,
+    explain: "The notes' rule of thumb flags high leverage when hᵢᵢ exceeds <em>three times the average leverage</em>, 3p/n — not a fixed constant like 0.5. The other three are all stated directly: hᵢᵢ is bounded between 0 and 1, the hᵢᵢ's sum to p (so h̄ = p/n), and in SLR that distance is explicit in hᵢᵢ = 1/n + (Xᵢ − X̄)²/SSX." },
 ];
 
 const SECTIONS = [
   "Week 4, Day 1 — Matrix Notation & Multiple Regression",
   "Week 4, Day 2 — The Hat Matrix & the F-test Family",
   "Week 5, Day 1 — Partial F-tests, Adjusted R², & Feature Engineering",
+  "Week 6, Day 1 — Multicollinearity, Outliers & Leverage",
 ];
 
 const STORAGE_KEY = "mlr-fundamentals-quiz-v2"; // v2: options are shuffled, answers stored by text not index
