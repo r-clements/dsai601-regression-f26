@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Outliers, Influence, and Model Selection — Week 6, Day 2 | DSAI 601</title>
+<meta name="description" content="Accessible class notes on externally studentized residuals, Cook's distance and what to do about influential points, the four model-specification cases, the geometric reason R-squared can never decrease, Mallows' Cp from the bias-variance decomposition, and the Akaike information criterion.">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --muted: #4a4a4a;
+    --rule: #c9c9c9;
+    --accent: #0b4f8a;
+    --accent-bg: #eef4fa;
+    --focus: #0b4f8a;
+    --pop: #a4262c;   /* population / true  — 5.9:1 on white */
+    --est: #5b2d8e;   /* estimate / fitted  — 8.5:1 on white */
+    --err: #8a5000;   /* errors / residuals — 5.1:1 on white */
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #f2f2f2; --muted: #cfcfcf; --rule: #555;
+      --accent: #8ab8e0; --accent-bg: #182430; --focus: #8ab8e0;
+      --pop: #ff9f99; --est: #cbb0ff; --err: #f0b458;
+    }
+    body { background: #131313; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 1.0625rem;
+    line-height: 1.65;
+    color: var(--ink);
+    background: #fff;
+  }
+  @media (prefers-color-scheme: dark) { body { background: #131313; } }
+  .wrap { max-width: 46rem; margin: 0 auto; padding: 1.5rem 1.25rem 5rem; }
+  a { color: var(--accent); }
+  a:focus-visible, summary:focus-visible, :focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+  .skip {
+    position: absolute; left: -9999px; top: 0;
+    background: var(--accent); color: #fff;
+    padding: .75rem 1rem; z-index: 10; text-decoration: none;
+  }
+  .skip:focus { left: .5rem; top: .5rem; }
+  h1 { font-size: 1.85rem; line-height: 1.25; margin: 0 0 .25rem; }
+  h2 { font-size: 1.35rem; line-height: 1.3; margin: 2.5rem 0 .5rem;
+       padding-top: .75rem; border-top: 2px solid var(--rule); }
+  h3 { font-size: 1.1rem; margin: 1.75rem 0 .4rem; }
+  p, li { max-width: 42rem; }
+  .lede { color: var(--muted); margin-top: 0; }
+  nav.toc {
+    background: var(--accent-bg); border: 1px solid var(--rule);
+    border-radius: 8px; padding: 1rem 1.25rem; margin: 2rem 0;
+  }
+  nav.toc h2 { font-size: 1.05rem; margin: 0 0 .5rem; border: 0; padding: 0; }
+  nav.toc ol { margin: 0; padding-left: 1.25rem; }
+  nav.toc li { margin: .3rem 0; }
+  nav.toc a { display: inline-block; min-height: 24px; padding: 2px 0; }
+  table { border-collapse: collapse; margin: 1rem 0; width: 100%; }
+  /* wide tables (long model equations) scroll inside their own box so the
+     page itself never scrolls horizontally -- WCAG 1.4.10 reflow */
+  .tablewrap { overflow-x: auto; margin: 1rem 0; }
+  .tablewrap > table { margin: 0; }
+  caption { text-align: left; font-weight: 600; padding-bottom: .5rem; }
+  th, td { border: 1px solid var(--rule); padding: .5rem .7rem; text-align: left; }
+  thead th { background: var(--accent-bg); }
+  td.hi { font-weight: 700; }
+  figure { margin: 1.5rem 0; }
+  figcaption { font-size: .95rem; color: var(--muted); margin-top: .5rem; }
+  svg { max-width: 100%; height: auto; display: block; }
+  details {
+    border: 1px solid var(--rule); border-radius: 6px;
+    padding: .5rem .85rem; margin: .75rem 0; background: var(--accent-bg);
+  }
+  summary { cursor: pointer; font-weight: 600; min-height: 24px; padding: .25rem 0; }
+  details[open] summary { margin-bottom: .5rem; }
+  math { font-size: 1.15em; }
+  math[display="block"] { margin: 1rem 0; overflow-x: auto; overflow-y: hidden; }
+  .eq { margin: 1.25rem 0; }
+  .note {
+    border-left: 4px solid var(--accent); background: var(--accent-bg);
+    padding: .75rem 1rem; margin: 1.25rem 0; border-radius: 0 6px 6px 0;
+  }
+  .note > :first-child { margin-top: 0; }
+  .note > :last-child { margin-bottom: 0; }
+  .caution { border-left-color: var(--pop); }
+  .tag {
+    display: inline-block; font-size: .8rem; font-weight: 700;
+    letter-spacing: .02em; text-transform: uppercase;
+    border: 1px solid currentColor; border-radius: 4px;
+    padding: 0 .4em; white-space: nowrap;
+  }
+  .tag.warn { color: var(--pop); }
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 2px solid var(--rule);
+           color: var(--muted); font-size: .95rem; }
+  ol.steps { padding-left: 1.4rem; }
+  ol.steps > li { margin: .75rem 0; }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+
+<div class="wrap">
+<header>
+  <p class="lede"><strong>DSAI 601 — Regression</strong> · Fall 2026 · Week 6, Day 2</p>
+  <h1>Outliers, Influence, and Model Selection</h1>
+  <p class="lede">Accessible transcription of the handwritten class notes. All equations are marked up in MathML so they can be read by a screen reader, magnified, or rendered in braille. All figures have text descriptions. Annotations written in a second pen colour in the original — the orange and red underlines splitting Cook's distance into its two halves, and the green marking on the <math alttext="C sub p"><msub><mi>C</mi><mi>p</mi></msub></math> plot — are reproduced here as labelled callouts and table columns, so none of their meaning depends on colour.</p>
+</header>
+
+<nav class="toc" aria-labelledby="toc-h">
+  <h2 id="toc-h">On this page</h2>
+  <ol>
+    <li><a href="#leverage">I. Leverage (recap)</a></li>
+    <li><a href="#outliers">II. Outliers</a></li>
+    <li><a href="#influential">III. Influential points</a></li>
+    <li><a href="#whattodo">What to do?</a></li>
+    <li><a href="#selection">IV. Model selection</a></li>
+    <li><a href="#r2problem">V. The problem with R²</a></li>
+    <li><a href="#cp">VI. Mallows' Cp</a></li>
+    <li><a href="#cpplot">Reading the Cp plot</a></li>
+    <li><a href="#aic">VII. AIC</a></li>
+  </ol>
+</nav>
+
+<main id="main">
+
+<h2 id="leverage">I. Leverage (recap)</h2>
+
+<p>Carried over from Week 6, Day 1: <math alttext="h sub i i"><msub><mi>h</mi><mrow><mi>i</mi><mi>i</mi></mrow></msub></math> is the <math alttext="i th"><mi>i</mi></math>th diagonal entry of the <math alttext="n by n"><mrow><mi>n</mi><mo>×</mo><mi>n</mi></mrow></math> hat matrix <math alttext="H"><mi>H</mi></math>.</p>
+
+<ol class="steps">
+  <li><math alttext="zero is less than or equal to h i i is less than or equal to one"><mrow><mn>0</mn><mo>≤</mo><msub><mi>h</mi><mrow><mi>i</mi><mi>i</mi></mrow></msub><mo>≤</mo><mn>1</mn></mrow></math></li>
+  <li><math alttext="the sum over i of h i i equals the trace of H equals p, and h bar equals p over n"><mrow><munder><mo>∑</mo><mi>i</mi></munder><msub><mi>h</mi><mrow><mi>i</mi><mi>i</mi></mrow></msub><mo>=</mo><mi>tr</mi><mo>(</mo><mi>H</mi><mo>)</mo><mo>=</mo><mi>p</mi><mo>,</mo><mspace width="1em"/><mover><mi>h</mi><mo>‾</mo></mover><mo>=</mo><mfrac><mi>p</mi><mi>n</mi></mfrac></mrow></math></li>
+</ol>
+
+<div class="note caution">
+  <p><span class="tag warn">Rule of thumb</span> High leverage: <math alttext="h i i greater than 3 p over n"><mrow><msub><mi>h</mi><mrow><mi>i</mi><mi>i</mi></mrow></msub><mo>&gt;</mo><mn>3</mn><mfrac><mi>p</mi><mi>n</mi></mfrac></mrow></math>. With <math alttext="p equals 10"><mrow><mi>p</mi><mo>=</mo><mn>10</mn></mrow></math> and <math alttext="n equals 100"><mrow><mi>n</mi><mo>=</mo><mn>100</mn></mrow></math> that is <math alttext="30 over 100"><mfrac><mn>30</mn><mn>100</mn></mfrac></math> — flag any point whose leverage exceeds 0.3.</p>
+</div>
+
+<figure>
+<svg viewBox="0 0 520 300" role="img" aria-labelledby="fig33-t fig33-d" xmlns="http://www.w3.org/2000/svg">
+  <title id="fig33-t">One high-leverage point flattening the fitted line</title>
+  <desc id="fig33-d">A scatter of eight points on the left with two fitted lines: a dotted steep line fitted to the cluster alone, labelled "without it", and a solid much flatter line fitted once the circled point at the far right is included, labelled "with it".</desc>
+  <line x1="60" y1="250" x2="480" y2="250" stroke="currentColor" stroke-width="2"/>
+  <line x1="60" y1="250" x2="60" y2="30" stroke="currentColor" stroke-width="2"/>
+  <text x="66" y="24" font-size="15" fill="currentColor">y</text>
+  <text x="486" y="256" font-size="15" fill="currentColor">x</text>
+  <line x1="84.9" y1="231" x2="242.5" y2="36.8" stroke="var(--est)" stroke-width="3" stroke-dasharray="3 6"/>
+  <line x1="81.4" y1="165.3" x2="444.7" y2="92.3" stroke="var(--est)" stroke-width="3"/>
+  <g fill="currentColor">
+    <circle cx="95.1" cy="214.7" r="4"/>
+    <circle cx="112.3" cy="202" r="4"/>
+    <circle cx="129.4" cy="172.4" r="4"/>
+    <circle cx="146.5" cy="161.9" r="4"/>
+    <circle cx="163.7" cy="128.1" r="4"/>
+    <circle cx="180.8" cy="117.6" r="4"/>
+    <circle cx="198" cy="88" r="4"/>
+    <circle cx="215.1" cy="71.1" r="4"/>
+  </g>
+  <circle cx="420.7" cy="145" r="5" fill="var(--pop)"/>
+  <ellipse cx="420.7" cy="145" rx="18" ry="15" fill="none" stroke="var(--pop)" stroke-width="2.5"/>
+  <line x1="420.7" y1="128" x2="408" y2="196" stroke="var(--pop)" stroke-width="1.5"/>
+  <text x="404" y="214" font-size="14" fill="var(--pop)" text-anchor="middle">high leverage</text>
+  <text x="248" y="34" font-size="14" fill="var(--est)">without it</text>
+  <text x="440" y="84" font-size="14" fill="var(--est)" text-anchor="end">with it</text>
+</svg>
+<figcaption>Figure 33. The same sketch as Week 6, Day 1 — one distant point in <math alttext="x"><mi>x</mi></math> swings the fitted line on its own.</figcaption>
+</figure>
+<details>
+  <summary>Long description of Figure 33</summary>
+  <p>Axes of <math alttext="y"><mi>y</mi></math> against <math alttext="x"><mi>x</mi></math>. Eight observations cluster in the left half and trend upward steeply; one further observation sits far to the right, circled, well below the level the cluster's trend predicts. The <strong>dotted</strong> line is the least-squares fit to the cluster alone, with a slope of about 2. The <strong>solid</strong> line is the fit to all nine points, and its slope collapses to about 0.3 — dragged down at the right by that single observation. This is a redraw of Figure 32 from the previous session, reproduced here because the notes restate it before moving on to outliers.</p>
+</details>
+
+<h2 id="outliers">II. Outliers</h2>
+
+<h3 id="studentized">Externally studentized residual</h3>
+
+<div class="eq">
+<math display="block" alttext="stud of e sub i equals e sub i over the square root of M S E with i deleted times one minus h i i; this follows a t distribution with n minus 1 minus p degrees of freedom">
+  <mrow>
+    <mi>stud</mi><mo>(</mo><msub><mi>e</mi><mi>i</mi></msub><mo>)</mo><mo>=</mo>
+    <mfrac>
+      <msub><mi>e</mi><mi>i</mi></msub>
+      <msqrt><mrow>
+        <msub><mi>MSE</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msub>
+        <mo>(</mo><mn>1</mn><mo>−</mo><msub><mi>h</mi><mrow><mi>i</mi><mi>i</mi></mrow></msub><mo>)</mo>
+      </mrow></msqrt>
+    </mfrac>
+    <mo>∼</mo>
+    <msub><mi>t</mi><mrow><mo>(</mo><mi>n</mi><mo>−</mo><mn>1</mn><mo>)</mo><mo>−</mo><mi>p</mi></mrow></msub>
+  </mrow>
+</math>
+</div>
+
+<div class="tablewrap">
+<table>
+  <caption>What each piece of that ratio is, as annotated in the original</caption>
+  <thead>
+    <tr><th scope="col">Piece</th><th scope="col">What it is</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row"><math alttext="e sub i"><msub><mi>e</mi><mi>i</mi></msub></math></th>
+      <td>the raw residual, <math alttext="y sub i minus y hat sub i"><mrow><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub></mrow></math></td>
+    </tr>
+    <tr>
+      <th scope="row"><math alttext="one minus h i i"><mrow><mn>1</mn><mo>−</mo><msub><mi>h</mi><mrow><mi>i</mi><mi>i</mi></mrow></msub></mrow></math></th>
+      <td>the leverage correction</td>
+    </tr>
+    <tr>
+      <th scope="row"><math alttext="M S E with i deleted"><msub><mi>MSE</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msub></math></th>
+      <td>from the model fit on all observations <strong>except</strong> the <math alttext="i th"><mi>i</mi></math>th point</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="eq">
+<math display="block" alttext="M S E with i deleted equals sigma hat squared with i deleted equals S S E with i deleted over n minus 1 minus p equals the sum over j of e j squared over n minus 1 minus p">
+  <mrow>
+    <msub><mi>MSE</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msub><mo>=</mo>
+    <msubsup><mover><mi>σ</mi><mo>^</mo></mover><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow><mn>2</mn></msubsup><mo>=</mo>
+    <mfrac>
+      <msub><mi>SSE</mi><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msub>
+      <mrow><mo>(</mo><mi>n</mi><mo>−</mo><mn>1</mn><mo>)</mo><mo>−</mo><mi>p</mi></mrow>
+    </mfrac>
+    <mo>=</mo>
+    <mfrac>
+      <mrow><munder><mo>∑</mo><mi>j</mi></munder><msubsup><mi>e</mi><mi>j</mi><mn>2</mn></msubsup></mrow>
+      <mrow><mo>(</mo><mi>n</mi><mo>−</mo><mn>1</mn><mo>)</mo><mo>−</mo><mi>p</mi></mrow>
+    </mfrac>
+  </mrow>
+</math>
+</div>
+
+<div class="note">
+  <p>The degrees of freedom are <math alttext="n minus 1 minus p"><mrow><mo>(</mo><mi>n</mi><mo>−</mo><mn>1</mn><mo>)</mo><mo>−</mo><mi>p</mi></mrow></math>, not <math alttext="n minus p"><mrow><mi>n</mi><mo>−</mo><mi>p</mi></mrow></math>, <strong>because the model is fit on <math alttext="n minus 1"><mrow><mi>n</mi><mo>−</mo><mn>1</mn></mrow></math> points</strong>.</p>
+</div>
+
+<p>Where the denominator comes from:</p>
+
+<div class="eq">
+<math display="block" alttext="the variance of e equals sigma squared times I minus H; the estimated standard error of e equals the square root of sigma hat squared times I minus H; so the estimated standard error of e sub i equals the square root of sigma hat squared with i deleted times one minus h i i">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd><mrow><mi>Var</mi><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><mrow><msup><mi>σ</mi><mn>2</mn></msup><mo>(</mo><mi>I</mi><mo>−</mo><mi>H</mi><mo>)</mo></mrow></mtd>
+    </mtr>
+    <mtr>
+      <mtd><mrow><mover><mi>SE</mi><mo>^</mo></mover><mo>(</mo><mi>e</mi><mo>)</mo></mrow></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><msqrt><mrow><msup><mover><mi>σ</mi><mo>^</mo></mover><mn>2</mn></msup><mo>(</mo><mi>I</mi><mo>−</mo><mi>H</mi><mo>)</mo></mrow></msqrt></mtd>
+    </mtr>
+    <mtr>
+      <mtd><mrow><mo>⟹</mo><mover><mi>SE</mi><mo>^</mo></mover><mo>(</mo><msub><mi>e</mi><mi>i</mi></msub><mo>)</mo></mrow></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><msqrt><mrow><msubsup><mover><mi>σ</mi><mo>^</mo></mover><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow><mn>2</mn></msubsup><mo>(</mo><mn>1</mn><mo>−</mo><msub><mi>h</mi><mrow><mi>i</mi><mi>i</mi></mrow></msub><mo>)</mo></mrow></msqrt></mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<p>The subscript <math alttext="open paren i close paren"><mrow><mo>(</mo><mi>i</mi><mo>)</mo></mrow></math> is what makes it <strong>externally</strong> studentized — the <math alttext="i th"><mi>i</mi></math>th point is left out of the variance estimate, so a genuine outlier does not get to inflate the yardstick used to judge it.</p>
+
+<div class="note caution">
+  <p><span class="tag warn">Decision</span> <math alttext="the absolute value of stud of e sub i is greater than t star with n minus 1 minus p degrees of freedom at one minus alpha over two"><mrow><mo>|</mo><mi>stud</mi><mo>(</mo><msub><mi>e</mi><mi>i</mi></msub><mo>)</mo><mo>|</mo><mo>&gt;</mo><msubsup><mi>t</mi><mrow><mi>n</mi><mo>−</mo><mn>1</mn><mo>−</mo><mi>p</mi><mo>,</mo><mo>(</mo><mn>1</mn><mo>−</mo><mi>α</mi><mo>/</mo><mn>2</mn><mo>)</mo></mrow><mo>*</mo></msubsup></mrow></math> ⟹ the <math alttext="i th"><mi>i</mi></math>th point is an <strong>outlier</strong>. In practice the margin note just says the cutoff is about <strong>2</strong>.</p>
+</div>
+
+<h2 id="influential">III. Influential points</h2>
+
+<p><strong>High leverage + outlier.</strong> Neither on its own is enough; a point has to be both unusual in <math alttext="x"><mi>x</mi></math> and badly fitted before it moves the answer.</p>
+
+<h3 id="cooks">Cook's distance</h3>
+
+<div class="eq">
+<math display="block" alttext="D sub i equals y i minus y hat i squared over p sigma hat squared, times h i i over one minus h i i squared">
+  <mrow>
+    <msub><mi>D</mi><mi>i</mi></msub><mo>=</mo>
+    <mfrac>
+      <msup><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub><mo>)</mo></mrow><mn>2</mn></msup>
+      <mrow><mi>p</mi><msup><mover><mi>σ</mi><mo>^</mo></mover><mn>2</mn></msup></mrow>
+    </mfrac>
+    <mo>·</mo>
+    <mfrac>
+      <msub><mi>h</mi><mrow><mi>i</mi><mi>i</mi></mrow></msub>
+      <msup><mrow><mo>(</mo><mn>1</mn><mo>−</mo><msub><mi>h</mi><mrow><mi>i</mi><mi>i</mi></mrow></msub><mo>)</mo></mrow><mn>2</mn></msup>
+    </mfrac>
+  </mrow>
+</math>
+</div>
+
+<div class="tablewrap">
+<table>
+  <caption>The original underlines the two factors in different colours; they are the two halves of "influential"</caption>
+  <thead>
+    <tr><th scope="col">Factor</th><th scope="col">Role</th><th scope="col">Behaviour</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row"><math alttext="y i minus y hat i squared over p sigma hat squared"><mfrac><msup><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub><mo>)</mo></mrow><mn>2</mn></msup><mrow><mi>p</mi><msup><mover><mi>σ</mi><mo>^</mo></mover><mn>2</mn></msup></mrow></mfrac></math></th>
+      <td class="hi">outlier part</td>
+      <td>grows with how badly the point is fitted</td>
+    </tr>
+    <tr>
+      <th scope="row"><math alttext="h i i over one minus h i i squared"><mfrac><msub><mi>h</mi><mrow><mi>i</mi><mi>i</mi></mrow></msub><msup><mrow><mo>(</mo><mn>1</mn><mo>−</mo><msub><mi>h</mi><mrow><mi>i</mi><mi>i</mi></mrow></msub><mo>)</mo></mrow><mn>2</mn></msup></mfrac></math></th>
+      <td class="hi">leverage part</td>
+      <td>as <math alttext="h i i"><msub><mi>h</mi><mrow><mi>i</mi><mi>i</mi></mrow></msub></math> rises this rises too, and faster — the denominator is shrinking while the numerator grows</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="note caution">
+  <p><span class="tag warn">Rule of thumb</span> <math alttext="D sub i greater than 4 over n"><mrow><msub><mi>D</mi><mi>i</mi></msub><mo>&gt;</mo><mfrac><mn>4</mn><mi>n</mi></mfrac></mrow></math> ⟹ “influential”.</p>
+</div>
+
+<h2 id="whattodo">What to do?</h2>
+
+<ul>
+  <li><strong>Do not delete</strong> unless it's erroneous.</li>
+  <li>If not sure, <strong>analyze the data twice</strong>, with and without. Report both sets of results.</li>
+  <li><strong>Try a different model</strong> — new data, a different method.</li>
+</ul>
+
+<h2 id="selection">IV. Model selection</h2>
+
+<div class="tablewrap">
+<table>
+  <caption>Four ways a specification can stand relative to the truth</caption>
+  <thead>
+    <tr><th scope="col">Case</th><th scope="col">What it means</th><th scope="col">Consequence</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">1. Underspecified</th>
+      <td>missing important predictors</td>
+      <td class="hi">biased estimates</td>
+    </tr>
+    <tr>
+      <th scope="row">2. Extraneous predictors</th>
+      <td>harmless extras included</td>
+      <td>unbiased estimates, not too bad</td>
+    </tr>
+    <tr>
+      <th scope="row">3. Overspecified</th>
+      <td>redundant predictors</td>
+      <td>multicollinearity</td>
+    </tr>
+    <tr>
+      <th scope="row">4. Correctly specified</th>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="r2problem">V. The problem with R²</h2>
+
+<p><strong>As you add predictors, <math alttext="R squared"><msup><mi>R</mi><mn>2</mn></msup></math> goes up.</strong> The geometry says why it has no choice.</p>
+
+<figure>
+<svg viewBox="0 0 560 400" role="img" aria-labelledby="fig34-t fig34-d" xmlns="http://www.w3.org/2000/svg">
+  <title id="fig34-t">Projecting Y onto a line inside a plane</title>
+  <desc id="fig34-d">A parallelogram stands for the column space of X1 and X2, with a line inside it for the column space of X1 alone. The vector Y points up out of the plane. Its projection onto the plane is y-hat-2 and onto the line is y-hat-1, and the residual to the plane is shorter than the residual to the line.</desc>
+
+  <!-- the plane Col(X1, X2) -->
+  <polygon points="40,330 300,355 520,265 260,240" fill="none" stroke="var(--accent)" stroke-width="2.5"/>
+  <!-- the line Col(X1) inside it -->
+  <line x1="106" y1="336" x2="315" y2="250" stroke="var(--est)" stroke-width="4"/>
+
+  <!-- Y from the origin -->
+  <line x1="150" y1="318" x2="390" y2="95" stroke="var(--pop)" stroke-width="3"/>
+  <circle cx="150" cy="318" r="4" fill="currentColor"/>
+  <text x="398" y="90" font-size="16" fill="var(--pop)">Y</text>
+
+  <!-- e1: Y to yhat1 (projection onto the line) -->
+  <line x1="390" y1="95" x2="255" y2="275" stroke="var(--err)" stroke-width="3" stroke-dasharray="8 5"/>
+  <!-- e2: Y to yhat2 (projection onto the plane) -->
+  <line x1="390" y1="95" x2="390" y2="300" stroke="var(--est)" stroke-width="3"/>
+  <!-- yhat2 - yhat1, inside the plane -->
+  <line x1="255" y1="275" x2="390" y2="300" stroke="currentColor" stroke-width="2" stroke-dasharray="3 4"/>
+
+  <!-- right angle at yhat2 -->
+  <polyline points="376,300 376,288 390,288" fill="none" stroke="var(--est)" stroke-width="2"/>
+
+  <circle cx="255" cy="275" r="4.5" fill="var(--err)"/>
+  <circle cx="390" cy="300" r="4.5" fill="var(--est)"/>
+
+  <text x="330" y="176" font-size="15" fill="var(--err)">e₁ (dashed)</text>
+  <text x="400" y="200" font-size="15" fill="var(--est)">e₂ (solid)</text>
+  <text x="236" y="293" font-size="15" fill="var(--err)" text-anchor="end">ŷ₁</text>
+  <text x="400" y="318" font-size="15" fill="var(--est)">ŷ₂</text>
+
+  <line x1="104" y1="344" x2="112" y2="338" stroke="var(--est)" stroke-width="1.5"/>
+  <text x="100" y="358" font-size="14" fill="var(--est)" text-anchor="end">Col(X₁)</text>
+  <text x="300" y="382" font-size="14" fill="var(--accent)" text-anchor="middle">Col(X₁ and X₂)</text>
+</svg>
+<figcaption>Figure 34. Adding <math alttext="X sub 2"><msub><mi>X</mi><mn>2</mn></msub></math> enlarges the subspace we project onto, and a projection onto a bigger subspace can only land closer to <math alttext="Y"><mi>Y</mi></math>.</figcaption>
+</figure>
+<details>
+  <summary>Long description of Figure 34</summary>
+  <p>A parallelogram drawn in perspective represents <math alttext="the column space of X 1 and X 2"><mrow><mi>Col</mi><mo>(</mo><msub><mi>X</mi><mn>1</mn></msub><mo>,</mo><msub><mi>X</mi><mn>2</mn></msub><mo>)</mo></mrow></math>, the two-dimensional subspace spanned by both predictors. A thick line drawn inside it is <math alttext="the column space of X 1"><mrow><mi>Col</mi><mo>(</mo><msub><mi>X</mi><mn>1</mn></msub><mo>)</mo></mrow></math>, the one-dimensional subspace spanned by the first predictor alone — note that the line lies <em>within</em> the plane.</p>
+  <p>From a dot marking the origin, a vector rises out of the plane to the point <math alttext="Y"><mi>Y</mi></math> at the top right. Two residual vectors run back down from <math alttext="Y"><mi>Y</mi></math>: a <strong>dashed</strong> one to <math alttext="y hat 1"><msub><mover><mi>y</mi><mo>^</mo></mover><mn>1</mn></msub></math>, the point on the line, and a <strong>solid</strong> one to <math alttext="y hat 2"><msub><mover><mi>y</mi><mo>^</mo></mover><mn>2</mn></msub></math>, the point in the plane, which meets the plane at a right angle marked with a small square. A faint dotted segment inside the plane joins <math alttext="y hat 1"><msub><mover><mi>y</mi><mo>^</mo></mover><mn>1</mn></msub></math> to <math alttext="y hat 2"><msub><mover><mi>y</mi><mo>^</mo></mover><mn>2</mn></msub></math>.</p>
+  <p>Those three segments form a right triangle, which is the whole argument: the solid residual is a leg and the dashed one is the hypotenuse, so the solid one cannot be longer. Dashed versus solid carries the same distinction as the two pen colours in the original.</p>
+</details>
+
+<p>The two statements written beside the figure:</p>
+
+<div class="eq">
+<math display="block" alttext="the norm of e 2 is less than or equal to the norm of e 1">
+  <mrow>
+    <mo>‖</mo><msub><mi>e</mi><mn>2</mn></msub><mo>‖</mo>
+    <mo>≤</mo>
+    <mo>‖</mo><msub><mi>e</mi><mn>1</mn></msub><mo>‖</mo>
+  </mrow>
+</math>
+</div>
+
+<div class="eq">
+<math display="block" alttext="the norm of e 1 squared equals the norm of e 2 squared plus the norm of y hat 2 minus y hat 1 squared">
+  <mrow>
+    <msup><mrow><mo>‖</mo><msub><mi>e</mi><mn>1</mn></msub><mo>‖</mo></mrow><mn>2</mn></msup>
+    <mo>=</mo>
+    <msup><mrow><mo>‖</mo><msub><mi>e</mi><mn>2</mn></msub><mo>‖</mo></mrow><mn>2</mn></msup>
+    <mo>+</mo>
+    <msup><mrow><mo>‖</mo><msub><mover><mi>y</mi><mo>^</mo></mover><mn>2</mn></msub><mo>−</mo><msub><mover><mi>y</mi><mo>^</mo></mover><mn>1</mn></msub><mo>‖</mo></mrow><mn>2</mn></msup>
+  </mrow>
+</math>
+</div>
+
+<p>The second is Pythagoras on that right triangle, and it forces the first: <math alttext="the norm of e 1 squared"><msup><mrow><mo>‖</mo><msub><mi>e</mi><mn>1</mn></msub><mo>‖</mo></mrow><mn>2</mn></msup></math> is <math alttext="the norm of e 2 squared"><msup><mrow><mo>‖</mo><msub><mi>e</mi><mn>2</mn></msub><mo>‖</mo></mrow><mn>2</mn></msup></math> plus something that cannot be negative. Since <math alttext="S S E equals the norm of e squared"><mrow><mi>SSE</mi><mo>=</mo><msup><mrow><mo>‖</mo><mi>e</mi><mo>‖</mo></mrow><mn>2</mn></msup></mrow></math>, adding a predictor can never raise <math alttext="S S E"><mi>SSE</mi></math>, so it can never lower <math alttext="R squared"><msup><mi>R</mi><mn>2</mn></msup></math>.</p>
+
+<div class="note caution">
+  <p><span class="tag warn">Demo to come</span> We'll show that <strong>19 junk predictors</strong> give <math alttext="R squared approximately 0.79"><mrow><msup><mi>R</mi><mn>2</mn></msup><mo>≈</mo><mn>.79</mn></mrow></math>.</p>
+</div>
+
+<p>Adjusted <math alttext="R squared"><msup><mi>R</mi><mn>2</mn></msup></math> charges for the extra parameter, so that particular disaster can't happen:</p>
+
+<div class="eq">
+<math display="block" alttext="adjusted R squared equals one minus, S S E over n minus p, all over S S T over n minus 1">
+  <mrow>
+    <mtext>adj </mtext><msup><mi>R</mi><mn>2</mn></msup><mo>=</mo><mn>1</mn><mo>−</mo>
+    <mfrac>
+      <mrow><mi>SSE</mi><mo>/</mo><mo>(</mo><mi>n</mi><mo>−</mo><mi>p</mi><mo>)</mo></mrow>
+      <mrow><mi>SST</mi><mo>/</mo><mo>(</mo><mi>n</mi><mo>−</mo><mn>1</mn><mo>)</mo></mrow>
+    </mfrac>
+  </mrow>
+</math>
+</div>
+
+<div class="note">
+  <p>But it is not a cure. Adjusted <math alttext="R squared"><msup><mi>R</mi><mn>2</mn></msup></math> <strong>still increases for insignificant predictors</strong> — anything with <math alttext="p value less than point 32"><mrow><mi>p</mi><mtext>-val</mtext><mo>&lt;</mo><mn>.32</mn></mrow></math>. It overfits, and adds too many predictors.</p>
+</div>
+
+<h2 id="cp">VI. Mallows' <math alttext="C sub p"><msub><mi>C</mi><mi>p</mi></msub></math></h2>
+
+<p>Two issues with models:</p>
+
+<ol class="steps">
+  <li>Bias in predictions</li>
+  <li>Variance in predictions</li>
+</ol>
+
+<p>The expected (standardized) prediction error charges for both:</p>
+
+<div class="eq">
+<math display="block" alttext="Gamma sub p equals one over sigma squared times the sum over i of the expectation of y hat i minus the expectation of y i, squared">
+  <mrow>
+    <msub><mi>Γ</mi><mi>p</mi></msub><mo>=</mo>
+    <mfrac><mn>1</mn><msup><mi>σ</mi><mn>2</mn></msup></mfrac>
+    <munder><mo>∑</mo><mi>i</mi></munder>
+    <mi>E</mi><msup><mrow><mo>(</mo><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub><mo>−</mo><mi>E</mi><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>)</mo><mo>)</mo></mrow><mn>2</mn></msup>
+  </mrow>
+</math>
+</div>
+
+<p>with <math alttext="the expectation of y sub i"><mrow><mi>E</mi><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>)</mo></mrow></math> the <strong>true mean response</strong>. Splitting that into variance and squared bias:</p>
+
+<div class="eq">
+<math display="block" alttext="Gamma sub p equals one over sigma squared, open bracket, the sum over i of the variance of y hat i, plus the sum over i of the expectation of y hat i minus the expectation of y i all squared, close bracket">
+  <mrow>
+    <msub><mi>Γ</mi><mi>p</mi></msub><mo>=</mo>
+    <mfrac><mn>1</mn><msup><mi>σ</mi><mn>2</mn></msup></mfrac>
+    <mo>[</mo>
+    <munder><mo>∑</mo><mi>i</mi></munder><mi>Var</mi><mo>(</mo><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub><mo>)</mo>
+    <mo>+</mo>
+    <munder><mo>∑</mo><mi>i</mi></munder><msup><mrow><mo>(</mo><mi>E</mi><mo>(</mo><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub><mo>)</mo><mo>−</mo><mi>E</mi><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>)</mo><mo>)</mo></mrow><mn>2</mn></msup>
+    <mo>]</mo>
+  </mrow>
+</math>
+</div>
+
+<div class="tablewrap">
+<table>
+  <caption>The two bracketed terms, labelled (a) and (b) in the original</caption>
+  <thead>
+    <tr><th scope="col">Term</th><th scope="col">Name</th><th scope="col">Evaluates to</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">(a)</th>
+      <td>variance</td>
+      <td><math alttext="the variance of Y hat equals sigma squared H, so the sum over i of the variance of y hat i equals sigma squared times the trace of H equals sigma squared p"><mrow><mi>Var</mi><mo>(</mo><mover><mi>Y</mi><mo>^</mo></mover><mo>)</mo><mo>=</mo><msup><mi>σ</mi><mn>2</mn></msup><mi>H</mi><mo>⟹</mo><munder><mo>∑</mo><mi>i</mi></munder><mi>Var</mi><mo>(</mo><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub><mo>)</mo><mo>=</mo><msup><mi>σ</mi><mn>2</mn></msup><mi>tr</mi><mo>(</mo><mi>H</mi><mo>)</mo><mo>=</mo><msup><mi>σ</mi><mn>2</mn></msup><mi>p</mi></mrow></math></td>
+    </tr>
+    <tr>
+      <th scope="row">(b)</th>
+      <td>bias squared</td>
+      <td><math alttext="the expectation of S S E sub p minus n minus p times sigma squared"><mrow><mi>E</mi><mo>(</mo><msub><mi>SSE</mi><mi>p</mi></msub><mo>)</mo><mo>−</mo><mo>(</mo><mi>n</mi><mo>−</mo><mi>p</mi><mo>)</mo><msup><mi>σ</mi><mn>2</mn></msup></mrow></math></td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p>Substituting both into the bracket, the <math alttext="sigma squared"><msup><mi>σ</mi><mn>2</mn></msup></math>s cancel against the leading <math alttext="one over sigma squared"><mfrac><mn>1</mn><msup><mi>σ</mi><mn>2</mn></msup></mfrac></math> — the original strikes them out in red — and replacing the unknowns by their estimates leaves:</p>
+
+<div class="eq">
+<math display="block" alttext="C sub p equals S S E sub p over sigma hat squared for the full model, minus n minus 2 p">
+  <mrow>
+    <msub><mi>C</mi><mi>p</mi></msub><mo>=</mo>
+    <mfrac>
+      <msub><mi>SSE</mi><mi>p</mi></msub>
+      <msubsup><mover><mi>σ</mi><mo>^</mo></mover><mi>F</mi><mn>2</mn></msubsup>
+    </mfrac>
+    <mo>−</mo><mo>(</mo><mi>n</mi><mo>−</mo><mn>2</mn><mi>p</mi><mo>)</mo>
+  </mrow>
+</math>
+</div>
+
+<div class="note">
+  <p><strong>The full model always lands on the diagonal.</strong> Putting <math alttext="S S E full"><msub><mi>SSE</mi><mi>F</mi></msub></math> and <math alttext="sigma hat squared full equals S S E full over n minus p max"><mrow><msubsup><mover><mi>σ</mi><mo>^</mo></mover><mi>F</mi><mn>2</mn></msubsup><mo>=</mo><msub><mi>SSE</mi><mi>F</mi></msub><mo>/</mo><mo>(</mo><mi>n</mi><mo>−</mo><msub><mi>p</mi><mi>max</mi></msub><mo>)</mo></mrow></math> into the formula gives</p>
+  <div class="eq">
+  <math display="block" alttext="C at p max equals S S E full over S S E full over n minus p max, minus n minus 2 p max, which equals p max">
+    <mrow>
+      <msub><mi>C</mi><msub><mi>p</mi><mi>max</mi></msub></msub><mo>=</mo>
+      <mfrac>
+        <msub><mi>SSE</mi><mi>F</mi></msub>
+        <mrow><msub><mi>SSE</mi><mi>F</mi></msub><mo>/</mo><mo>(</mo><mi>n</mi><mo>−</mo><msub><mi>p</mi><mi>max</mi></msub><mo>)</mo></mrow>
+      </mfrac>
+      <mo>−</mo><mo>(</mo><mi>n</mi><mo>−</mo><mn>2</mn><msub><mi>p</mi><mi>max</mi></msub><mo>)</mo>
+      <mo>=</mo><msub><mi>p</mi><mi>max</mi></msub>
+    </mrow>
+  </math>
+  </div>
+</div>
+
+<h2 id="cpplot">Reading the <math alttext="C sub p"><msub><mi>C</mi><mi>p</mi></msub></math> plot</h2>
+
+<figure>
+<svg viewBox="0 0 520 360" role="img" aria-labelledby="fig35-t fig35-d" xmlns="http://www.w3.org/2000/svg">
+  <title id="fig35-t">Cp against p for every candidate model</title>
+  <desc id="fig35-d">Candidate models plotted as points with the number of parameters on the horizontal axis and Cp on the vertical. A diagonal reference line Cp equals p runs across. Small models sit far above it; the model X1 and X3 at p equals 3, ringed to mark it as the chosen one, is the leftmost point on or below the line.</desc>
+
+  <line x1="90" y1="300" x2="470" y2="300" stroke="currentColor" stroke-width="2"/>
+  <line x1="90" y1="300" x2="90" y2="40" stroke="currentColor" stroke-width="2"/>
+  <text x="96" y="34" font-size="15" fill="currentColor">C_p</text>
+  <text x="476" y="306" font-size="15" fill="currentColor">p</text>
+
+  <!-- x ticks -->
+  <g stroke="currentColor" stroke-width="1.5">
+    <line x1="153.3" y1="300" x2="153.3" y2="306"/>
+    <line x1="216.7" y1="300" x2="216.7" y2="306"/>
+    <line x1="280" y1="300" x2="280" y2="306"/>
+    <line x1="343.3" y1="300" x2="343.3" y2="306"/>
+    <line x1="406.7" y1="300" x2="406.7" y2="306"/>
+  </g>
+  <g font-size="13" fill="currentColor" text-anchor="middle">
+    <text x="153.3" y="322">1</text><text x="216.7" y="322">2</text>
+    <text x="280" y="322">3</text><text x="343.3" y="322">4</text>
+    <text x="406.7" y="322">5</text>
+  </g>
+  <line x1="84" y1="195.8" x2="90" y2="195.8" stroke="currentColor" stroke-width="1.5"/>
+  <text x="78" y="200" font-size="13" fill="currentColor" text-anchor="end">5</text>
+
+  <!-- the reference line Cp = p -->
+  <line x1="121.7" y1="289.6" x2="432" y2="187.5" stroke="currentColor" stroke-width="2"/>
+  <text x="438" y="183" font-size="13" fill="currentColor">C_p = p</text>
+
+  <!-- candidate models -->
+  <g fill="currentColor">
+    <circle cx="153.3" cy="70.8" r="4"/>
+    <circle cx="216.7" cy="112.5" r="4"/>
+    <circle cx="216.7" cy="164.6" r="4"/>
+    <circle cx="280" cy="195.8" r="4"/>
+    <circle cx="343.3" cy="254.2" r="4"/>
+    <circle cx="406.7" cy="195.8" r="4"/>
+  </g>
+  <!-- the chosen model, circled -->
+  <circle cx="280" cy="241.7" r="4" fill="var(--pop)"/>
+  <circle cx="280" cy="241.7" r="15" fill="none" stroke="var(--pop)" stroke-width="2.5"/>
+
+  <g font-size="12.5" fill="currentColor">
+    <text x="162" y="68">intercept only</text>
+    <text x="225" y="110">X₁</text>
+    <text x="225" y="162">X₂</text>
+    <text x="288" y="190">X₁, X₂</text>
+    <text x="352" y="252">X₁, X₂, X₃</text>
+    <text x="398" y="186" text-anchor="end">full</text>
+  </g>
+  <text x="280" y="274" font-size="12.5" fill="var(--pop)" text-anchor="middle">X₁, X₃</text>
+
+  <line x1="66" y1="96" x2="146" y2="74" stroke="var(--pop)" stroke-width="1.5"/>
+  <text x="62" y="92" font-size="13" fill="var(--pop)" text-anchor="end">high bias</text>
+</svg>
+<figcaption>Figure 35. With <math alttext="p max equals 5"><mrow><msub><mi>p</mi><mi>max</mi></msub><mo>=</mo><mn>5</mn></mrow></math> and candidate predictors <math alttext="X 1, X 2, X 3, X 4"><mrow><msub><mi>X</mi><mn>1</mn></msub><mo>,</mo><msub><mi>X</mi><mn>2</mn></msub><mo>,</mo><msub><mi>X</mi><mn>3</mn></msub><mo>,</mo><msub><mi>X</mi><mn>4</mn></msub></mrow></math>, the model circled is the smallest one that reaches the line.</figcaption>
+</figure>
+<details>
+  <summary>Long description of Figure 35</summary>
+  <p>The horizontal axis is <math alttext="p"><mi>p</mi></math>, the number of parameters, ticked 1 to 5; the vertical axis is <math alttext="C sub p"><msub><mi>C</mi><mi>p</mi></msub></math>, with 5 marked. A straight reference line rises from the bottom left: this is <math alttext="C sub p equals p"><mrow><msub><mi>C</mi><mi>p</mi></msub><mo>=</mo><mi>p</mi></mrow></math>, and the full model sits exactly on it at <math alttext="p equals 5"><mrow><mi>p</mi><mo>=</mo><mn>5</mn></mrow></math>, as the algebra above guarantees.</p>
+  <p>Each candidate model is a point. The intercept-only model sits at the top left, far above the line, annotated <strong>high bias</strong>; <math alttext="X 1"><msub><mi>X</mi><mn>1</mn></msub></math> and <math alttext="X 2"><msub><mi>X</mi><mn>2</mn></msub></math> at <math alttext="p equals 2"><mrow><mi>p</mi><mo>=</mo><mn>2</mn></mrow></math> are lower but still well above it, and <math alttext="X 1, X 2"><mrow><msub><mi>X</mi><mn>1</mn></msub><mo>,</mo><msub><mi>X</mi><mn>2</mn></msub></mrow></math> at <math alttext="p equals 3"><mrow><mi>p</mi><mo>=</mo><mn>3</mn></mrow></math> is above it too. Two points fall below the line: <math alttext="X 1, X 3"><mrow><msub><mi>X</mi><mn>1</mn></msub><mo>,</mo><msub><mi>X</mi><mn>3</mn></msub></mrow></math> at <math alttext="p equals 3"><mrow><mi>p</mi><mo>=</mo><mn>3</mn></mrow></math>, which is ringed, and <math alttext="X 1, X 2, X 3"><mrow><msub><mi>X</mi><mn>1</mn></msub><mo>,</mo><msub><mi>X</mi><mn>2</mn></msub><mo>,</mo><msub><mi>X</mi><mn>3</mn></msub></mrow></math> at <math alttext="p equals 4"><mrow><mi>p</mi><mo>=</mo><mn>4</mn></mrow></math>.</p>
+  <p>Distance above the line is bias, so the rule is to take the <strong>smallest <math alttext="p"><mi>p</mi></math> whose <math alttext="C sub p"><msub><mi>C</mi><mi>p</mi></msub></math> is below or on the line</strong>. Both of the low points qualify on bias, and the ringed one wins because it is further left — the same reading the original marks with a ring and the word <em>parsimonious</em>.</p>
+</details>
+
+<div class="note">
+  <p><strong>Rule.</strong> Smallest <math alttext="p"><mi>p</mi></math> such that <math alttext="C sub p"><msub><mi>C</mi><mi>p</mi></msub></math> is below or on the line ⟹ low bias. <strong>Parsimonious.</strong></p>
+</div>
+
+<h2 id="aic">VII. AIC — Akaike information criterion</h2>
+
+<p>Assume <math alttext="epsilon follows a normal distribution with mean 0 and variance sigma squared I"><mrow><mi>ε</mi><mo>∼</mo><mi>N</mi><mo>(</mo><mn>0</mn><mo>,</mo><msup><mi>σ</mi><mn>2</mn></msup><mi>I</mi><mo>)</mo></mrow></math>. The log-likelihood is</p>
+
+<div class="eq">
+<math display="block" alttext="ell of beta and sigma squared equals minus n over 2 times the natural log of 2 pi, minus n over 2 times the natural log of sigma squared, minus one over 2 sigma squared times the squared norm of Y minus X beta">
+  <mrow>
+    <mi>ℓ</mi><mo>(</mo><mi>β</mi><mo>,</mo><msup><mi>σ</mi><mn>2</mn></msup><mo>)</mo><mo>=</mo>
+    <mo>−</mo><mfrac><mi>n</mi><mn>2</mn></mfrac><mi>ln</mi><mo>(</mo><mn>2</mn><mi>π</mi><mo>)</mo>
+    <mo>−</mo><mfrac><mi>n</mi><mn>2</mn></mfrac><mi>ln</mi><mo>(</mo><msup><mi>σ</mi><mn>2</mn></msup><mo>)</mo>
+    <mo>−</mo><mfrac><mn>1</mn><mrow><mn>2</mn><msup><mi>σ</mi><mn>2</mn></msup></mrow></mfrac>
+    <msubsup><mrow><mo>‖</mo><mi>Y</mi><mo>−</mo><mi>X</mi><mi>β</mi><mo>‖</mo></mrow><mn>2</mn><mn>2</mn></msubsup>
+  </mrow>
+</math>
+</div>
+
+<p>Evaluated at the maximum likelihood estimates, where <math alttext="sigma hat squared equals S S E sub p over n"><mrow><msup><mover><mi>σ</mi><mo>^</mo></mover><mn>2</mn></msup><mo>=</mo><msub><mi>SSE</mi><mi>p</mi></msub><mo>/</mo><mi>n</mi></mrow></math>, this collapses to</p>
+
+<div class="eq">
+<math display="block" alttext="minus 2 ell of beta hat and sigma hat squared equals n times the natural log of S S E sub p, minus n times the natural log of n, plus n times the natural log of 2 pi, plus n">
+  <mrow>
+    <mo>−</mo><mn>2</mn><mi>ℓ</mi><mo>(</mo><mover><mi>β</mi><mo>^</mo></mover><mo>,</mo><msup><mover><mi>σ</mi><mo>^</mo></mover><mn>2</mn></msup><mo>)</mo><mo>=</mo>
+    <mi>n</mi><mi>ln</mi><msub><mi>SSE</mi><mi>p</mi></msub>
+    <mo>−</mo><mi>n</mi><mi>ln</mi><mi>n</mi>
+    <mo>+</mo><mi>n</mi><mi>ln</mi><mn>2</mn><mi>π</mi>
+    <mo>+</mo><mi>n</mi>
+  </mrow>
+</math>
+</div>
+
+<div class="eq">
+<math display="block" alttext="A I C equals minus 2 ell of beta hat and sigma hat squared, plus 2 times p plus 1">
+  <mrow>
+    <mi>AIC</mi><mo>=</mo>
+    <mo>−</mo><mn>2</mn><mi>ℓ</mi><mo>(</mo><mover><mi>β</mi><mo>^</mo></mover><mo>,</mo><msup><mover><mi>σ</mi><mo>^</mo></mover><mn>2</mn></msup><mo>)</mo>
+    <mo>+</mo><mn>2</mn><mo>(</mo><mi>p</mi><mo>+</mo><mn>1</mn><mo>)</mo>
+  </mrow>
+</math>
+</div>
+
+<p>Only the first two terms depend on the model, so comparing AIC across candidates is comparing <math alttext="n times the natural log of S S E sub p plus 2 times p plus 1"><mrow><mi>n</mi><mi>ln</mi><msub><mi>SSE</mi><mi>p</mi></msub><mo>+</mo><mn>2</mn><mo>(</mo><mi>p</mi><mo>+</mo><mn>1</mn><mo>)</mo></mrow></math> — fit against a penalty of 2 per parameter. The <math alttext="plus 1"><mrow><mo>+</mo><mn>1</mn></mrow></math> counts <math alttext="sigma squared"><msup><mi>σ</mi><mn>2</mn></msup></math>, which is estimated too.</p>
+
+</main>
+
+<footer>
+  <p>Transcribed from the handwritten notes <em>LR_week_6_day_2.pdf</em> (6 pages). Equations are MathML; figures are inline SVG with title, description, and an expandable long description. Figure numbering continues from Week 6, Day 1. Conforms to WCAG 2.2 Level AA.</p>
+</footer>
+</div>
+</body>
+</html>
