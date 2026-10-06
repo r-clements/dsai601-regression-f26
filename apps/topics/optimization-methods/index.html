@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Optimization Methods — DSAI 601</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      max-width: 980px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+      color: #222;
+    }
+    a.back { font-size: 0.9rem; color: #1a5fb4; text-decoration: none; }
+    h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+    p.instructions { color: #555; font-size: 0.95rem; margin-top: 0; }
+    p.a11y-instructions {
+      border-left: 3px solid #1a5fb4;
+      padding-left: 0.75rem;
+      margin-top: 0.5rem;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1.25rem;
+      margin: 0.75rem 0 1.25rem;
+      padding: 0.75rem 1rem;
+      background: #f7f7f8;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    .controls button {
+      padding: 0.4rem 0.8rem;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    .controls label { display: flex; align-items: center; gap: 0.5rem; }
+    .controls select { padding: 0.3rem 0.4rem; font-size: 0.9rem; }
+    .slider-group { display: flex; align-items: center; gap: 0.5rem; }
+    .slider-group input[type="range"] { width: 180px; }
+    .slider-group output { font-weight: 600; min-width: 4rem; display: inline-block; }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    #bowl-panel, #contour-panel {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .panel-cell h3 { font-size: 0.95rem; margin: 0 0 0.4rem 0.1rem; color: #333; }
+
+    #formula-line {
+      font-size: 1rem;
+      margin: 0 0 0.75rem;
+      padding: 0.6rem 0.9rem;
+      background: #f7f7f8;
+      border-radius: 6px;
+      border-left: 3px solid #1a5fb4;
+    }
+    #formula-line .formula { font-weight: 600; }
+
+    #stats { font-size: 0.95rem; margin: 0 0 1.25rem; }
+    #stats .stat { margin-right: 0.5rem; }
+    #stats .stat:not(:last-child)::after { content: " | "; color: #999; font-weight: 400; }
+    #stats .stat-value { font-weight: 600; }
+    #stats .status-converged { color: #1e7d32; }
+    #stats .status-diverged { color: #c01c28; }
+
+    .ball { fill: #c01c28; stroke: #fff; stroke-width: 1.5px; }
+    .trail-line { stroke: #c01c28; stroke-width: 1.5px; fill: none; opacity: 0.6; }
+    .trail-dot { fill: #c01c28; opacity: 0.5; }
+    .start-marker { stroke: #1a5fb4; stroke-width: 2.5px; fill: none; }
+    .minima-marker { stroke: #1a5fb4; stroke-width: 2px; fill: none; opacity: 0.6; }
+    .axis-label { font-size: 0.75rem; fill: #555; }
+    .contour-legend-label { font-size: 0.75rem; fill: #555; }
+  </style>
+</head>
+<body>
+  <a class="back" href="../../">&larr; All topics</a>
+  <h1>Visualizing Optimization Methods</h1>
+  <p id="instructions" class="instructions">
+    Pick a surface f(x, y) and an optimization method, then press Start to watch the method roll
+    a ball downhill from a randomly chosen starting point — shown both on the rotatable 3D surface
+    and on the contour map below it, which also traces the exact path taken. Switching the method
+    restarts from the <em>same</em> starting point, so you can compare how differently each one
+    behaves; "New starting point" picks a fresh random point on the current surface.
+  </p>
+  <p id="a11y-instructions" class="instructions a11y-instructions">
+    Keyboard and screen reader users: the surface and method menus, the parameter sliders, and the
+    Step/Start/Reset buttons are the primary controls. The 3D panel can also be rotated by dragging
+    with a mouse, but this is a supplementary view — the contour map, the stats line, and the
+    details panel below convey the same information.
+  </p>
+
+  <div class="controls">
+    <label for="surface-select">surface
+      <select id="surface-select">
+        <option value="convex">Convex bowl (elongated ravine)</option>
+        <option value="multimodal">Multiple minima (Himmelblau)</option>
+        <option value="saddle">Saddle point</option>
+      </select>
+    </label>
+    <label for="algo-select">method
+      <select id="algo-select">
+        <option value="gd">Gradient Descent</option>
+        <option value="momentum">Gradient Descent with Momentum</option>
+        <option value="adagrad">AdaGrad</option>
+        <option value="adam">Adam</option>
+        <option value="newton">Newton-Raphson</option>
+      </select>
+    </label>
+    <button id="new-start">New starting point</button>
+  </div>
+
+  <div class="controls" id="algo-controls"></div>
+
+  <div class="controls">
+    <button id="play-pause">Start</button>
+    <button id="step">Step</button>
+    <button id="reset">Reset</button>
+    <div class="slider-group">
+      <label for="speed-slider">speed</label>
+      <input type="range" id="speed-slider" min="1" max="20" step="1" value="8">
+    </div>
+  </div>
+
+  <p id="formula-line">
+    <span class="formula" id="formula-text">–</span>
+  </p>
+
+  <div class="row">
+    <div class="panel-cell">
+      <h3>Surface f(x, y) — drag to rotate</h3>
+      <div id="bowl-panel"></div>
+    </div>
+    <div class="panel-cell">
+      <h3>Contour map and path taken</h3>
+      <div id="contour-panel"></div>
+    </div>
+  </div>
+
+  <div id="stats" aria-live="polite" aria-atomic="true">
+    <span class="stat">iteration <span id="cur-iter" class="stat-value">0</span></span>
+    <span class="stat">x = <span id="cur-x" class="stat-value">–</span></span>
+    <span class="stat">y = <span id="cur-y" class="stat-value">–</span></span>
+    <span class="stat">f(x,y) = <span id="cur-f" class="stat-value">–</span></span>
+    <span class="stat">‖∇f‖ = <span id="cur-gradnorm" class="stat-value">–</span></span>
+    <span class="stat">status: <span id="cur-status" class="stat-value">ready</span></span>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
