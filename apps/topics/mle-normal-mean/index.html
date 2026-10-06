@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Maximum Likelihood Estimation: Normal Mean — DSAI 601</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      max-width: 980px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+      color: #222;
+    }
+    a.back { font-size: 0.9rem; color: #1a5fb4; text-decoration: none; }
+    h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+    p.instructions { color: #555; font-size: 0.95rem; margin-top: 0; }
+    p.a11y-instructions {
+      border-left: 3px solid #1a5fb4;
+      padding-left: 0.75rem;
+      margin-top: 0.5rem;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1.25rem;
+      margin: 0.75rem 0 1.25rem;
+      padding: 0.75rem 1rem;
+      background: #f7f7f8;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    .controls button {
+      padding: 0.4rem 0.8rem;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    .controls label { display: flex; align-items: center; gap: 0.5rem; }
+    .slider-group { display: flex; align-items: center; gap: 0.5rem; }
+    .slider-group input[type="range"] { width: 220px; }
+    .slider-group output { font-weight: 600; min-width: 3.5rem; display: inline-block; }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .row.single { grid-template-columns: 1fr; }
+    #density-panel, #likelihood-panel, #loglik-panel {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .panel-cell h3 { font-size: 0.95rem; margin: 0 0 0.4rem 0.1rem; color: #333; }
+
+    #stats { font-size: 0.95rem; margin: 0 0 1.25rem; }
+    #stats .stat { margin-right: 0.5rem; }
+    #stats .stat:not(:last-child)::after { content: " | "; color: #999; font-weight: 400; }
+    #stats .stat-value { font-weight: 600; }
+
+    .point { fill: #1a5fb4; }
+    .guess-curve { stroke: #c01c28; stroke-width: 2; fill: none; }
+    .density-stem { stroke: #c01c28; stroke-dasharray: 3 3; stroke-width: 1; opacity: 0.8; }
+    .density-dot { fill: #c01c28; stroke: #fff; stroke-width: 1px; }
+    .fn-curve { stroke: #1a5fb4; stroke-width: 2; fill: none; }
+    .current-marker { fill: #c01c28; stroke: #fff; stroke-width: 1px; }
+    .optimum-marker { stroke: #1a5fb4; stroke-width: 2.5px; fill: none; }
+    .true-ref-line { stroke: #333; stroke-dasharray: 2 2; }
+    .guess-handle-line { stroke: #c01c28; stroke-width: 2; }
+    .guess-handle-grip { fill: #c01c28; stroke: none; }
+    .axis-label { font-size: 0.75rem; fill: #555; }
+    .ref-label { font-size: 0.7rem; }
+  </style>
+</head>
+<body>
+  <a class="back" href="../../">&larr; All topics</a>
+  <h1>Maximum Likelihood Estimation: Estimating a Normal Mean</h1>
+  <p id="instructions" class="instructions">
+    A sample of n = 30 points is drawn from a true Normal distribution, N(μ, σ²), where σ is assumed
+    <strong>known</strong>. For any candidate guess μ̂, the curve below is the Normal density
+    N(μ̂, σ²); the dots sitting on it mark the density of each sample point under that guess. The
+    likelihood L(μ̂) = Π f(xᵢ; μ̂, σ) is the product of all of those heights, and the log-likelihood
+    ℓ(μ̂) = Σ log f(xᵢ; μ̂, σ) is their sum of logs. Drag the red handle above the curve (or use the
+    μ̂ slider) to try different guesses, and watch where that guess lands on the L(μ) and ℓ(μ) curves
+    below — both are maximized at exactly the same μ̂, the sample mean x̄, which is the MLE.
+  </p>
+  <p id="a11y-instructions" class="instructions a11y-instructions">
+    Keyboard and screen reader users: the μ̂ slider is the primary control, operable with the arrow
+    keys once focused. The handle on the top panel can also be dragged with a mouse, but this is a
+    supplementary view; all information is available through the slider and the stats line below
+    the panels.
+  </p>
+
+  <div class="controls">
+    <button id="new-sample" aria-describedby="instructions">New sample</button>
+    <button id="snap-mle" aria-describedby="instructions">Snap to MLE (x̄)</button>
+    <label><input type="checkbox" id="show-true" checked> show true μ</label>
+    <div class="slider-group">
+      <label for="mu-slider">μ̂ (your guess)</label>
+      <input type="range" id="mu-slider" aria-describedby="instructions a11y-instructions">
+      <output id="mu-readout" for="mu-slider">–</output>
+    </div>
+  </div>
+
+  <div class="row single">
+    <div class="panel-cell">
+      <h3>Candidate distribution N(μ̂, σ²) and the sample</h3>
+      <div id="density-panel"></div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="panel-cell">
+      <h3>Likelihood L(μ) = Π f(xᵢ; μ, σ)</h3>
+      <div id="likelihood-panel"></div>
+    </div>
+    <div class="panel-cell">
+      <h3>Log-likelihood ℓ(μ) = Σ log f(xᵢ; μ, σ)</h3>
+      <div id="loglik-panel"></div>
+    </div>
+  </div>
+
+  <div id="stats" aria-live="polite" aria-atomic="true">
+    <span class="stat">n = <span id="cur-n" class="stat-value">–</span></span>
+    <span class="stat">known σ = <span id="cur-sigma" class="stat-value">–</span></span>
+    <span class="stat">μ̂ = <span id="cur-mu" class="stat-value">–</span></span>
+    <span class="stat">x̄ (MLE) = <span id="cur-xbar" class="stat-value">–</span></span>
+    <span class="stat" id="true-mu-stat">true μ = <span id="cur-true-mu" class="stat-value">–</span></span>
+    <br>
+    <span class="stat">L(μ̂) = <span id="cur-L" class="stat-value">–</span></span>
+    <span class="stat">ℓ(μ̂) = <span id="cur-logL" class="stat-value">–</span></span>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
