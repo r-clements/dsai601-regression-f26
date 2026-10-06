@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AIC, BIC, Subset Search, and the Logistic Model — Week 7, Day 1 | DSAI 601</title>
+<meta name="description" content="Accessible class notes on the Akaike and Bayesian information criteria and what each is trying to do, best-subsets and stepwise search and why stepwise is avoided, the PRESS statistic as leave-one-out cross-validation, warnings about model selection, and the setup of logistic regression through the logit link.">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --muted: #4a4a4a;
+    --rule: #c9c9c9;
+    --accent: #0b4f8a;
+    --accent-bg: #eef4fa;
+    --focus: #0b4f8a;
+    --pop: #a4262c;   /* population / true  — 5.9:1 on white */
+    --est: #5b2d8e;   /* estimate / fitted  — 8.5:1 on white */
+    --err: #8a5000;   /* errors / residuals — 5.1:1 on white */
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #f2f2f2; --muted: #cfcfcf; --rule: #555;
+      --accent: #8ab8e0; --accent-bg: #182430; --focus: #8ab8e0;
+      --pop: #ff9f99; --est: #cbb0ff; --err: #f0b458;
+    }
+    body { background: #131313; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 1.0625rem;
+    line-height: 1.65;
+    color: var(--ink);
+    background: #fff;
+  }
+  @media (prefers-color-scheme: dark) { body { background: #131313; } }
+  .wrap { max-width: 46rem; margin: 0 auto; padding: 1.5rem 1.25rem 5rem; }
+  a { color: var(--accent); }
+  a:focus-visible, summary:focus-visible, :focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+  .skip {
+    position: absolute; left: -9999px; top: 0;
+    background: var(--accent); color: #fff;
+    padding: .75rem 1rem; z-index: 10; text-decoration: none;
+  }
+  .skip:focus { left: .5rem; top: .5rem; }
+  h1 { font-size: 1.85rem; line-height: 1.25; margin: 0 0 .25rem; }
+  h2 { font-size: 1.35rem; line-height: 1.3; margin: 2.5rem 0 .5rem;
+       padding-top: .75rem; border-top: 2px solid var(--rule); }
+  h3 { font-size: 1.1rem; margin: 1.75rem 0 .4rem; }
+  p, li { max-width: 42rem; }
+  .lede { color: var(--muted); margin-top: 0; }
+  nav.toc {
+    background: var(--accent-bg); border: 1px solid var(--rule);
+    border-radius: 8px; padding: 1rem 1.25rem; margin: 2rem 0;
+  }
+  nav.toc h2 { font-size: 1.05rem; margin: 0 0 .5rem; border: 0; padding: 0; }
+  nav.toc ol { margin: 0; padding-left: 1.25rem; }
+  nav.toc li { margin: .3rem 0; }
+  nav.toc a { display: inline-block; min-height: 24px; padding: 2px 0; }
+  table { border-collapse: collapse; margin: 1rem 0; width: 100%; }
+  /* wide tables (long model equations) scroll inside their own box so the
+     page itself never scrolls horizontally -- WCAG 1.4.10 reflow */
+  .tablewrap { overflow-x: auto; margin: 1rem 0; }
+  .tablewrap > table { margin: 0; }
+  caption { text-align: left; font-weight: 600; padding-bottom: .5rem; }
+  th, td { border: 1px solid var(--rule); padding: .5rem .7rem; text-align: left; }
+  thead th { background: var(--accent-bg); }
+  td.hi { font-weight: 700; }
+  figure { margin: 1.5rem 0; }
+  figcaption { font-size: .95rem; color: var(--muted); margin-top: .5rem; }
+  svg { max-width: 100%; height: auto; display: block; }
+  details {
+    border: 1px solid var(--rule); border-radius: 6px;
+    padding: .5rem .85rem; margin: .75rem 0; background: var(--accent-bg);
+  }
+  summary { cursor: pointer; font-weight: 600; min-height: 24px; padding: .25rem 0; }
+  details[open] summary { margin-bottom: .5rem; }
+  math { font-size: 1.15em; }
+  math[display="block"] { margin: 1rem 0; overflow-x: auto; overflow-y: hidden; }
+  .eq { margin: 1.25rem 0; }
+  .note {
+    border-left: 4px solid var(--accent); background: var(--accent-bg);
+    padding: .75rem 1rem; margin: 1.25rem 0; border-radius: 0 6px 6px 0;
+  }
+  .note > :first-child { margin-top: 0; }
+  .note > :last-child { margin-bottom: 0; }
+  .caution { border-left-color: var(--pop); }
+  .tag {
+    display: inline-block; font-size: .8rem; font-weight: 700;
+    letter-spacing: .02em; text-transform: uppercase;
+    border: 1px solid currentColor; border-radius: 4px;
+    padding: 0 .4em; white-space: nowrap;
+  }
+  .tag.warn { color: var(--pop); }
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 2px solid var(--rule);
+           color: var(--muted); font-size: .95rem; }
+  ol.steps { padding-left: 1.4rem; }
+  ol.steps > li { margin: .75rem 0; }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+
+<div class="wrap">
+<header>
+  <p class="lede"><strong>DSAI 601 — Regression</strong> · Fall 2026 · Week 7, Day 1</p>
+  <h1>AIC, BIC, Subset Search, and the Logistic Model</h1>
+  <p class="lede">Accessible transcription of the handwritten class notes. All equations are marked up in MathML so they can be read by a screen reader, magnified, or rendered in braille. The figure has a text description. Annotations written in a second pen colour in the original — and the highlighter marking the impossible region in the last plot — are reproduced here as labelled callouts and words, so none of their meaning depends on colour.</p>
+</header>
+
+<nav class="toc" aria-labelledby="toc-h">
+  <h2 id="toc-h">On this page</h2>
+  <ol>
+    <li><a href="#aic">I. Akaike information criterion (AIC)</a></li>
+    <li><a href="#aside">Aside: ordering the criteria by model size</a></li>
+    <li><a href="#bic">II. Bayesian information criterion (BIC)</a></li>
+    <li><a href="#vs">AIC versus BIC</a></li>
+    <li><a href="#howto">How to use them</a></li>
+    <li><a href="#subset">III. Subset search methods</a></li>
+    <li><a href="#press">IV. Prediction sum of squares (PRESS)</a></li>
+    <li><a href="#warnings">V. Warnings</a></li>
+    <li><a href="#solutions">VI. Solutions</a></li>
+    <li><a href="#logistic">VII. Logistic regression</a></li>
+  </ol>
+</nav>
+
+<main id="main">
+
+<h2 id="aic">I. Akaike information criterion (AIC)</h2>
+
+<p>Carried over from the end of Week 6, Day 2:</p>
+
+<div class="eq">
+<math display="block" alttext="minus 2 ell of beta hat and sigma hat squared equals n times the natural log of S S E sub p, minus n times the natural log of n, plus n times the natural log of 2 pi, plus n">
+  <mrow>
+    <mo>−</mo><mn>2</mn><mi>ℓ</mi><mo>(</mo><mover><mi>β</mi><mo>^</mo></mover><mo>,</mo><msup><mover><mi>σ</mi><mo>^</mo></mover><mn>2</mn></msup><mo>)</mo><mo>=</mo>
+    <mi>n</mi><mi>ln</mi><msub><mi>SSE</mi><mi>p</mi></msub>
+    <mo>−</mo><mi>n</mi><mi>ln</mi><mi>n</mi>
+    <mo>+</mo><mi>n</mi><mi>ln</mi><mo>(</mo><mn>2</mn><mi>π</mi><mo>)</mo>
+    <mo>+</mo><mi>n</mi>
+  </mrow>
+</math>
+</div>
+
+<div class="note">
+  <p><strong>Idea.</strong> The log-likelihood is <strong>biased / optimistic</strong>, because the estimates are based on our sample — the model has already been tuned to the very data we are scoring it on. So do a <strong>bias correction</strong>.</p>
+</div>
+
+<div class="eq">
+<math display="block" alttext="A I C equals minus 2 ell of theta hat, plus 2 times p plus 1">
+  <mrow>
+    <mi>AIC</mi><mo>=</mo>
+    <mo>−</mo><mn>2</mn><mi>ℓ</mi><mo>(</mo><mover><mi>θ</mi><mo>^</mo></mover><mo>)</mo>
+    <mo>+</mo><mn>2</mn><mo>(</mo><mi>p</mi><mo>+</mo><mn>1</mn><mo>)</mo>
+  </mrow>
+</math>
+</div>
+
+<div class="tablewrap">
+<table>
+  <caption>The three annotations on that formula in the original</caption>
+  <thead>
+    <tr><th scope="col">Piece</th><th scope="col">What the note says</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row"><math alttext="2 times p plus 1"><mrow><mn>2</mn><mo>(</mo><mi>p</mi><mo>+</mo><mn>1</mn><mo>)</mo></mrow></math></th>
+      <td>this is <strong>the bias</strong> — the correction term</td>
+    </tr>
+    <tr>
+      <th scope="row">the <math alttext="plus 1"><mrow><mo>+</mo><mn>1</mn></mrow></math></th>
+      <td>is because we estimate <math alttext="sigma squared"><msup><mi>σ</mi><mn>2</mn></msup></math> as well as the <math alttext="p"><mi>p</mi></math> coefficients</td>
+    </tr>
+    <tr>
+      <th scope="row">direction</th>
+      <td class="hi">lower is better</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="aside">Aside: ordering the criteria by model size</h2>
+
+<div class="eq">
+<math display="block" alttext="R squared, less than, R squared adjusted, less than, C p and A I C, less than, B I C">
+  <mrow>
+    <msup><mi>R</mi><mn>2</mn></msup><mo>&lt;</mo>
+    <msubsup><mi>R</mi><mi>a</mi><mn>2</mn></msubsup><mo>&lt;</mo>
+    <msub><mi>C</mi><mi>p</mi></msub><mo>,</mo><mi>AIC</mi><mo>&lt;</mo>
+    <mi>BIC</mi>
+  </mrow>
+</math>
+</div>
+
+<p>Read left to right this is an arrow from the <strong>biggest model</strong> to the <strong>smallest model</strong>. <math alttext="R squared"><msup><mi>R</mi><mn>2</mn></msup></math> keeps everything; adjusted <math alttext="R squared"><msup><mi>R</mi><mn>2</mn></msup></math> trims a little; <math alttext="C sub p"><msub><mi>C</mi><mi>p</mi></msub></math> and AIC trim more and sit at roughly the same place; BIC is the most aggressive and returns the smallest model.</p>
+
+<h2 id="bic">II. Bayesian information criterion (BIC)</h2>
+
+<div class="eq">
+<math display="block" alttext="B I C equals minus 2 ell of theta hat, plus p plus 1, times the natural log of n">
+  <mrow>
+    <mi>BIC</mi><mo>=</mo>
+    <mo>−</mo><mn>2</mn><mi>ℓ</mi><mo>(</mo><mover><mi>θ</mi><mo>^</mo></mover><mo>)</mo>
+    <mo>+</mo><mo>(</mo><mi>p</mi><mo>+</mo><mn>1</mn><mo>)</mo><mi>ln</mi><mi>n</mi>
+  </mrow>
+</math>
+</div>
+
+<p><strong>Lower is better</strong> here too. The marked term is <math alttext="p plus 1 times the natural log of n"><mrow><mo>(</mo><mi>p</mi><mo>+</mo><mn>1</mn><mo>)</mo><mi>ln</mi><mi>n</mi></mrow></math>, and the note on it reads: <strong>grows more quickly than AIC, so penalizes more heavily.</strong></p>
+
+<h2 id="vs">AIC versus BIC</h2>
+
+<div class="tablewrap">
+<table>
+  <caption>What each criterion is actually trying to do</caption>
+  <thead>
+    <tr><th scope="col"></th><th scope="col">AIC</th><th scope="col">BIC</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">Goal</th>
+      <td>Find the model that <strong>predicts best</strong>.</td>
+      <td>Find the <strong>true model</strong>.</td>
+    </tr>
+    <tr>
+      <th scope="row">Model size</th>
+      <td>Chooses larger models.</td>
+      <td>Smaller models.</td>
+    </tr>
+    <tr>
+      <th scope="row">Weak predictors</th>
+      <td>Keeps junk predictors.</td>
+      <td>Drops weak (“good”) predictors.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="howto">How to use them</h2>
+
+<ul>
+  <li>Must use the <strong>same data</strong> when comparing models.</li>
+  <li>The <strong>raw value doesn't matter</strong> — use them for ranking.</li>
+  <li>AIC and BIC <strong>might disagree</strong>.</li>
+</ul>
+
+<h2 id="subset">III. Subset search methods</h2>
+
+<h3 id="bestsubsets">Best subsets</h3>
+
+<p>Check all <math alttext="2 to the power p minus 1"><msup><mn>2</mn><mrow><mi>p</mi><mo>−</mo><mn>1</mn></mrow></msup></math> models.</p>
+
+<div class="tablewrap">
+<table>
+  <caption>How fast the search space grows</caption>
+  <thead>
+    <tr>
+      <th scope="col"><math alttext="p minus 1"><mrow><mi>p</mi><mo>−</mo><mn>1</mn></mrow></math> (predictors)</th>
+      <th scope="col">Models</th>
+      <th scope="col">Exactly</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><th scope="row">10</th><td>1024</td><td>1,024</td></tr>
+    <tr><th scope="row">20</th><td><math alttext="approximately 10 to the 6"><mrow><mo>≈</mo><msup><mn>10</mn><mn>6</mn></msup></mrow></math></td><td>1,048,576</td></tr>
+    <tr><th scope="row">40</th><td><math alttext="approximately 10 to the 12"><mrow><mo>≈</mo><msup><mn>10</mn><mn>12</mn></msup></mrow></math></td><td>1,099,511,627,776</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3 id="stepwise">Stepwise methods</h3>
+
+<ul>
+  <li><strong>Forward:</strong> add the predictor that drops <math alttext="S S E"><mi>SSE</mi></math> most, keep going until some threshold.</li>
+  <li><strong>Backward:</strong> fit the full model, drop the weakest predictor, keep going.</li>
+</ul>
+
+<h3 id="whynot">Why we don't use these</h3>
+
+<ol class="steps">
+  <li><strong>Computationally expensive.</strong></li>
+  <li><strong>Greedy</strong> — always picking the best predictor, so it could miss other pairs that are good together.</li>
+  <li><strong>Invalid p-values</strong> — using the same data multiple times.</li>
+  <li><strong>Unstable.</strong></li>
+  <li><strong>Overfitting</strong> — artificially good metric.</li>
+</ol>
+
+<h2 id="press">IV. Prediction sum of squares (PRESS)</h2>
+
+<ol class="steps">
+  <li>Let <math alttext="i equals 1"><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow></math>.</li>
+  <li>Drop observation <math alttext="i"><mi>i</mi></math> from the data.</li>
+  <li>Fit the model on the remaining observations.</li>
+  <li>Predict <math alttext="y hat sub i"><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub></math>.</li>
+  <li>Take <math alttext="y sub i minus y hat sub i, squared"><msup><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><msub><mover><mi>y</mi><mo>^</mo></mover><mi>i</mi></msub><mo>)</mo></mrow><mn>2</mn></msup></math>.</li>
+  <li><math alttext="i equals i plus 1"><mrow><mi>i</mi><mo>=</mo><mi>i</mi><mo>+</mo><mn>1</mn></mrow></math> and repeat steps 2–5.</li>
+  <li>Sum the squared errors.</li>
+</ol>
+
+<div class="note">
+  <p><strong>Note:</strong> this is <strong>leave-one-out cross-validation</strong>.</p>
+</div>
+
+<div class="eq">
+<math display="block" alttext="P R E S S equals the sum from i equals 1 to n of, y sub i minus y hat sub i with i deleted, squared, which equals the sum from i equals 1 to n of, e sub i over one minus h i i, squared">
+  <mrow>
+    <mi>PRESS</mi><mo>=</mo>
+    <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover>
+    <msup><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><msub><mover><mi>y</mi><mo>^</mo></mover><mrow><mi>i</mi><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msub><mo>)</mo></mrow><mn>2</mn></msup>
+    <mo>=</mo>
+    <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover>
+    <msup><mrow><mo>(</mo><mfrac><msub><mi>e</mi><mi>i</mi></msub><mrow><mn>1</mn><mo>−</mo><msub><mi>h</mi><mrow><mi>i</mi><mi>i</mi></mrow></msub></mrow></mfrac><mo>)</mo></mrow><mn>2</mn></msup>
+  </mrow>
+</math>
+</div>
+
+<div class="tablewrap">
+<table>
+  <caption>The two annotations under that identity</caption>
+  <thead>
+    <tr><th scope="col">Piece</th><th scope="col">What the note says</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row"><math alttext="y hat sub i with i deleted"><msub><mover><mi>y</mi><mo>^</mo></mover><mrow><mi>i</mi><mo>(</mo><mi>i</mi><mo>)</mo></mrow></msub></math></th>
+      <td><math alttext="y hat"><mover><mi>y</mi><mo>^</mo></mover></math> for the model fitted <strong>without</strong> observation <math alttext="i"><mi>i</mi></math></td>
+    </tr>
+    <tr>
+      <th scope="row"><math alttext="one minus h i i"><mrow><mn>1</mn><mo>−</mo><msub><mi>h</mi><mrow><mi>i</mi><mi>i</mi></mrow></msub></mrow></math></th>
+      <td>higher leverage = harder to predict when left out of the model</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="note">
+  <p>The right-hand form is what makes PRESS cheap: you get all <math alttext="n"><mi>n</mi></math> leave-one-out predictions from a <strong>single</strong> fit, by dividing each residual by <math alttext="one minus its leverage"><mrow><mn>1</mn><mo>−</mo><msub><mi>h</mi><mrow><mi>i</mi><mi>i</mi></mrow></msub></mrow></math>, rather than refitting the model <math alttext="n"><mi>n</mi></math> times.</p>
+</div>
+
+<h2 id="warnings">V. Warnings</h2>
+
+<ol class="steps">
+  <li><strong>Selection bias</strong> — always choosing the “best” model.</li>
+  <li><strong>Multiple testing</strong> — selecting for small p-values.</li>
+  <li><strong>Multicollinearity</strong> — if <math alttext="X sub 1"><msub><mi>X</mi><mn>1</mn></msub></math> and <math alttext="X sub 2"><msub><mi>X</mi><mn>2</mn></msub></math> are highly correlated, model selection chooses one arbitrarily.</li>
+</ol>
+
+<h2 id="solutions">VI. Solutions</h2>
+
+<ol class="steps">
+  <li>Use <strong>cross-validation</strong> or a hold-out set.</li>
+  <li>Remove correlated predictors first.</li>
+  <li>Keep predictors if it makes sense.</li>
+  <li>If you have <math alttext="X 1 squared"><msubsup><mi>X</mi><mn>1</mn><mn>2</mn></msubsup></math> or <math alttext="X 1 X 2"><mrow><msub><mi>X</mi><mn>1</mn></msub><msub><mi>X</mi><mn>2</mn></msub></mrow></math>, keep the main effects.</li>
+  <li>If <math alttext="n is much greater than p"><mrow><mi>n</mi><mo>≫</mo><mi>p</mi></mrow></math>, keep all predictors that make sense.</li>
+</ol>
+
+<h2 id="logistic">VII. Logistic regression</h2>
+
+<p>The response is now binary: <math alttext="Y sub i is in the set 0, 1"><mrow><msub><mi>Y</mi><mi>i</mi></msub><mo>∈</mo><mo>{</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo>}</mo></mrow></math>. So <math alttext="Y"><mi>Y</mi></math> is an <math alttext="n by 1"><mrow><mi>n</mi><mo>×</mo><mn>1</mn></mrow></math> vector of 0s and 1s, while the design matrix <math alttext="X"><mi>X</mi></math> is <math alttext="n by p"><mrow><mi>n</mi><mo>×</mo><mi>p</mi></mrow></math> exactly as before — a column of 1s followed by <math alttext="X 1 through X p minus 1"><mrow><msub><mi>X</mi><mn>1</mn></msub><mo>,</mo><mo>…</mo><mo>,</mo><msub><mi>X</mi><mrow><mi>p</mi><mo>−</mo><mn>1</mn></mrow></msub></mrow></math>.</p>
+
+<div class="eq">
+<math display="block" alttext="Y sub i follows a Bernoulli distribution with parameter pi sub i">
+  <mrow>
+    <msub><mi>Y</mi><mi>i</mi></msub><mo>∼</mo>
+    <mtext>Bernoulli</mtext><mo>(</mo><msub><mi>π</mi><mi>i</mi></msub><mo>)</mo>
+  </mrow>
+</math>
+</div>
+
+<div class="tablewrap">
+<table>
+  <caption>The probability mass function</caption>
+  <thead>
+    <tr><th scope="col">Value</th><th scope="col">Probability</th></tr>
+  </thead>
+  <tbody>
+    <tr><th scope="row">1</th><td><math alttext="pi sub i"><msub><mi>π</mi><mi>i</mi></msub></math></td></tr>
+    <tr><th scope="row">0</th><td><math alttext="one minus pi sub i"><mrow><mn>1</mn><mo>−</mo><msub><mi>π</mi><mi>i</mi></msub></mrow></math></td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="eq">
+<math display="block" alttext="the expectation of Y sub i equals pi sub i; the variance of Y sub i equals pi sub i times one minus pi sub i">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd><mrow><mi>E</mi><mo>(</mo><msub><mi>Y</mi><mi>i</mi></msub><mo>)</mo></mrow></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><msub><mi>π</mi><mi>i</mi></msub></mtd>
+    </mtr>
+    <mtr>
+      <mtd><mrow><mi>Var</mi><mo>(</mo><msub><mi>Y</mi><mi>i</mi></msub><mo>)</mo></mrow></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd><mrow><msub><mi>π</mi><mi>i</mi></msub><mo>(</mo><mn>1</mn><mo>−</mo><msub><mi>π</mi><mi>i</mi></msub><mo>)</mo></mrow></mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<h3 id="whynotlr">Why not use linear regression?</h3>
+
+<p>Suppose we tried the usual model anyway,</p>
+
+<div class="eq">
+<math display="block" alttext="Y sub i equals beta 0 plus beta 1 X 1 i plus beta 2 X 2 i plus dot dot dot plus beta p minus 1 X p minus 1 i plus epsilon i, which equals X sub i transpose beta plus epsilon sub i">
+  <mrow>
+    <msub><mi>Y</mi><mi>i</mi></msub><mo>=</mo>
+    <msub><mi>β</mi><mn>0</mn></msub><mo>+</mo>
+    <msub><mi>β</mi><mn>1</mn></msub><msub><mi>X</mi><mrow><mn>1</mn><mi>i</mi></mrow></msub><mo>+</mo>
+    <mo>⋯</mo><mo>+</mo>
+    <msub><mi>β</mi><mrow><mi>p</mi><mo>−</mo><mn>1</mn></mrow></msub><msub><mi>X</mi><mrow><mo>(</mo><mi>p</mi><mo>−</mo><mn>1</mn><mo>)</mo><mi>i</mi></mrow></msub><mo>+</mo>
+    <msub><mi>ε</mi><mi>i</mi></msub>
+    <mo>=</mo>
+    <msubsup><mi>X</mi><mi>i</mi><mi>T</mi></msubsup><mi>β</mi><mo>+</mo><msub><mi>ε</mi><mi>i</mi></msub>
+  </mrow>
+</math>
+</div>
+
+<p>so that <math alttext="pi sub i equals X sub i transpose beta"><mrow><msub><mi>π</mi><mi>i</mi></msub><mo>=</mo><msubsup><mi>X</mi><mi>i</mi><mi>T</mi></msubsup><mi>β</mi></mrow></math>. Three things go wrong.</p>
+
+<p><strong>① Errors are binary, not Normal.</strong> Since <math alttext="epsilon sub i equals Y sub i minus X sub i transpose beta"><mrow><msub><mi>ε</mi><mi>i</mi></msub><mo>=</mo><msub><mi>Y</mi><mi>i</mi></msub><mo>−</mo><msubsup><mi>X</mi><mi>i</mi><mi>T</mi></msubsup><mi>β</mi></mrow></math>, there are only two possible values:</p>
+
+<div class="tablewrap">
+<table>
+  <caption>The error takes one of two values, so it cannot be Normal</caption>
+  <thead>
+    <tr><th scope="col">If</th><th scope="col">then</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row"><math alttext="Y sub i equals 1"><mrow><msub><mi>Y</mi><mi>i</mi></msub><mo>=</mo><mn>1</mn></mrow></math></th>
+      <td><math alttext="epsilon sub i equals one minus X sub i transpose beta"><mrow><msub><mi>ε</mi><mi>i</mi></msub><mo>=</mo><mn>1</mn><mo>−</mo><msubsup><mi>X</mi><mi>i</mi><mi>T</mi></msubsup><mi>β</mi></mrow></math></td>
+    </tr>
+    <tr>
+      <th scope="row"><math alttext="Y sub i equals 0"><mrow><msub><mi>Y</mi><mi>i</mi></msub><mo>=</mo><mn>0</mn></mrow></math></th>
+      <td><math alttext="epsilon sub i equals minus X sub i transpose beta"><mrow><msub><mi>ε</mi><mi>i</mi></msub><mo>=</mo><mo>−</mo><msubsup><mi>X</mi><mi>i</mi><mi>T</mi></msubsup><mi>β</mi></mrow></math></td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p><strong>② Variance is not constant.</strong> <math alttext="the variance of Y sub i equals pi sub i times one minus pi sub i"><mrow><mi>Var</mi><mo>(</mo><msub><mi>Y</mi><mi>i</mi></msub><mo>)</mo><mo>=</mo><msub><mi>π</mi><mi>i</mi></msub><mo>(</mo><mn>1</mn><mo>−</mo><msub><mi>π</mi><mi>i</mi></msub><mo>)</mo></mrow></math> — it depends on <math alttext="pi sub i"><msub><mi>π</mi><mi>i</mi></msub></math>, and therefore on <math alttext="X"><mi>X</mi></math>. Homoskedasticity is gone.</p>
+
+<p><strong>③ Constraints on the response.</strong> <math alttext="zero is less than or equal to pi sub i is less than or equal to one"><mrow><mn>0</mn><mo>≤</mo><msub><mi>π</mi><mi>i</mi></msub><mo>≤</mo><mn>1</mn></mrow></math>, but a straight line is unbounded.</p>
+
+<figure>
+<svg viewBox="0 0 560 360" role="img" aria-labelledby="fig36-t fig36-d" xmlns="http://www.w3.org/2000/svg">
+  <title id="fig36-t">A straight line leaves the zero-to-one range; the logistic curve does not</title>
+  <desc id="fig36-d">Binary data plotted at heights 0 and 1 against x. A straight least-squares line passes below 0 on the left and above 1 on the right, entering the shaded bands marked impossible for a probability. An S-shaped logistic curve stays inside the band between 0 and 1 everywhere.</desc>
+
+  <!-- forbidden bands -->
+  <rect x="100" y="40" width="420" height="70" fill="var(--pop)" opacity="0.13"/>
+  <rect x="100" y="250" width="420" height="72" fill="var(--pop)" opacity="0.13"/>
+  <text x="516" y="58" font-size="13" fill="var(--pop)" text-anchor="end">impossible: above 1</text>
+  <text x="516" y="315" font-size="13" fill="var(--pop)" text-anchor="end">impossible: below 0</text>
+
+  <!-- axes -->
+  <line x1="100" y1="250" x2="530" y2="250" stroke="currentColor" stroke-width="2"/>
+  <line x1="100" y1="330" x2="100" y2="40" stroke="currentColor" stroke-width="2"/>
+  <line x1="92" y1="110" x2="100" y2="110" stroke="currentColor" stroke-width="2"/>
+  <text x="86" y="115" font-size="14" fill="currentColor" text-anchor="end">1</text>
+  <text x="86" y="255" font-size="14" fill="currentColor" text-anchor="end">0</text>
+  <text x="106" y="36" font-size="15" fill="currentColor">Y</text>
+  <text x="536" y="256" font-size="15" fill="currentColor">X</text>
+
+  <!-- straight line fit: escapes the band at both ends -->
+  <line x1="104" y1="271.9" x2="520" y2="72.3" stroke="var(--est)" stroke-width="3" stroke-dasharray="9 6"/>
+  <!-- logistic fit: stays inside -->
+  <polyline fill="none" stroke="var(--pop)" stroke-width="3"
+    points="100,248.4 112,248 124,247.3 136,246.5 148,245.4 160,244 172,242.2 184,239.8 196,236.9 208,233.2 220,228.6 232,223.1 244,216.6 256,209 268,200.6 280,191.4 292,181.8 304,172.1 316,162.7 328,154 340,146.1 352,139.2 364,133.3 376,128.4 388,124.4 400,121.2 412,118.6 424,116.6 436,115.1 448,113.9 460,113 472,112.3 484,111.7 496,111.3 508,111 520,110.8"/>
+
+  <!-- the binary observations -->
+  <g fill="currentColor">
+    <circle cx="124" cy="250" r="3.6"/><circle cx="144" cy="250" r="3.6"/><circle cx="160" cy="250" r="3.6"/>
+    <circle cx="172" cy="250" r="3.6"/><circle cx="184" cy="250" r="3.6"/><circle cx="204" cy="250" r="3.6"/>
+    <circle cx="228" cy="250" r="3.6"/><circle cx="256" cy="250" r="3.6"/><circle cx="284" cy="250" r="3.6"/>
+    <circle cx="316" cy="250" r="3.6"/><circle cx="352" cy="250" r="3.6"/>
+    <circle cx="236" cy="110" r="3.6"/><circle cx="268" cy="110" r="3.6"/><circle cx="300" cy="110" r="3.6"/>
+    <circle cx="332" cy="110" r="3.6"/><circle cx="360" cy="110" r="3.6"/><circle cx="380" cy="110" r="3.6"/>
+    <circle cx="404" cy="110" r="3.6"/><circle cx="428" cy="110" r="3.6"/><circle cx="452" cy="110" r="3.6"/>
+    <circle cx="476" cy="110" r="3.6"/>
+  </g>
+
+  <line x1="470" y1="86" x2="500" y2="78" stroke="var(--est)" stroke-width="1.5"/>
+  <text x="466" y="90" font-size="14" fill="var(--est)" text-anchor="end">linear regression (dashed)</text>
+  <text x="524" y="134" font-size="14" fill="var(--pop)" text-anchor="end">logistic (solid)</text>
+</svg>
+<figcaption>Figure 36. The straight line runs out of the only range a probability is allowed to occupy; the logistic curve is built so it cannot.</figcaption>
+</figure>
+<details>
+  <summary>Long description of Figure 36</summary>
+  <p>The horizontal axis is <math alttext="X"><mi>X</mi></math> and the vertical axis is <math alttext="Y"><mi>Y</mi></math>, with 0 and 1 marked. Because the response is binary, every observation sits on one of exactly two horizontal rows of dots: a row at height 0, running from the left across to about two-thirds of the way along, and a row at height 1, starting about a third of the way along and running to the right. The two rows overlap in the middle, which is the region where the outcome is genuinely uncertain.</p>
+  <p>Two fits are drawn through those points. The <strong>dashed</strong> line is an ordinary least-squares fit. It is below 0 at the left-hand edge and above 1 at the right-hand edge, so at both ends it is predicting a probability that cannot exist — those regions are shaded and labelled "impossible: above 1" and "impossible: below 0". The <strong>solid</strong> S-shaped curve is the logistic fit. It starts just above 0, rises steeply through the overlap region, and flattens just below 1, never leaving the permitted band.</p>
+  <p>That is the whole argument for the logistic model: it is not that the straight line fits badly in the middle, it is that the straight line has no mechanism to stop, so it must eventually produce nonsense. Dashed versus solid carries the same distinction as the two pen colours in the original, and the shaded bands reproduce the highlighter.</p>
+</details>
+
+<h3 id="logit">The logit link</h3>
+
+<p>We need a function mapping <math alttext="pi sub i"><msub><mi>π</mi><mi>i</mi></msub></math> onto a line — something that takes the interval <math alttext="0 to 1"><mrow><mo>[</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo>]</mo></mrow></math> and stretches it over the whole real line. Two steps get us there:</p>
+
+<div class="eq">
+<math display="block" alttext="odds equals pi sub i over one minus pi sub i, which lies in the open interval from 0 to infinity">
+  <mrow>
+    <mtext>odds</mtext><mo>=</mo>
+    <mfrac><msub><mi>π</mi><mi>i</mi></msub><mrow><mn>1</mn><mo>−</mo><msub><mi>π</mi><mi>i</mi></msub></mrow></mfrac>
+    <mo>∈</mo><mo>(</mo><mn>0</mn><mo>,</mo><mi>∞</mi><mo>)</mo>
+  </mrow>
+</math>
+</div>
+
+<div class="eq">
+<math display="block" alttext="log odds equals the natural log of pi sub i over one minus pi sub i, which lies in the open interval from minus infinity to infinity">
+  <mrow>
+    <mtext>log odds</mtext><mo>=</mo>
+    <mi>ln</mi><mfrac><msub><mi>π</mi><mi>i</mi></msub><mrow><mn>1</mn><mo>−</mo><msub><mi>π</mi><mi>i</mi></msub></mrow></mfrac>
+    <mo>∈</mo><mo>(</mo><mo>−</mo><mi>∞</mi><mo>,</mo><mi>∞</mi><mo>)</mo>
+  </mrow>
+</math>
+</div>
+
+<p>Taking odds removes the upper bound; taking logs removes the lower one. Setting that equal to the linear part gives the model:</p>
+
+<div class="eq">
+<math display="block" alttext="logit of pi sub i equals the natural log of pi sub i over one minus pi sub i, equals X sub i transpose beta">
+  <mrow>
+    <mi>logit</mi><mo>(</mo><msub><mi>π</mi><mi>i</mi></msub><mo>)</mo><mo>=</mo>
+    <mi>ln</mi><mfrac><msub><mi>π</mi><mi>i</mi></msub><mrow><mn>1</mn><mo>−</mo><msub><mi>π</mi><mi>i</mi></msub></mrow></mfrac>
+    <mo>=</mo>
+    <msubsup><mi>X</mi><mi>i</mi><mi>T</mi></msubsup><mi>β</mi>
+  </mrow>
+</math>
+</div>
+
+<div class="tablewrap">
+<table>
+  <caption>The two names annotated on that equation</caption>
+  <thead>
+    <tr><th scope="col">Part</th><th scope="col">Name</th><th scope="col">What it does</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row"><math alttext="logit of pi sub i"><mrow><mi>logit</mi><mo>(</mo><msub><mi>π</mi><mi>i</mi></msub><mo>)</mo></mrow></math></th>
+      <td class="hi">link function</td>
+      <td>maps <math alttext="pi sub i"><msub><mi>π</mi><mi>i</mi></msub></math> onto <math alttext="X sub i transpose beta"><mrow><msubsup><mi>X</mi><mi>i</mi><mi>T</mi></msubsup><mi>β</mi></mrow></math></td>
+    </tr>
+    <tr>
+      <th scope="row"><math alttext="X sub i transpose beta"><mrow><msubsup><mi>X</mi><mi>i</mi><mi>T</mi></msubsup><mi>β</mi></mrow></math></th>
+      <td class="hi">linear predictor</td>
+      <td>the familiar linear combination of the predictors</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p>Solving back for <math alttext="pi sub i"><msub><mi>π</mi><mi>i</mi></msub></math>:</p>
+
+<div class="eq">
+<math display="block" alttext="pi sub i equals e to the X sub i transpose beta over one plus e to the X sub i transpose beta, which equals one over one plus e to the minus X sub i transpose beta">
+  <mrow>
+    <msub><mi>π</mi><mi>i</mi></msub><mo>=</mo>
+    <mfrac>
+      <msup><mi>e</mi><mrow><msubsup><mi>X</mi><mi>i</mi><mi>T</mi></msubsup><mi>β</mi></mrow></msup>
+      <mrow><mn>1</mn><mo>+</mo><msup><mi>e</mi><mrow><msubsup><mi>X</mi><mi>i</mi><mi>T</mi></msubsup><mi>β</mi></mrow></msup></mrow>
+    </mfrac>
+    <mo>=</mo>
+    <mfrac>
+      <mn>1</mn>
+      <mrow><mn>1</mn><mo>+</mo><msup><mi>e</mi><mrow><mo>−</mo><msubsup><mi>X</mi><mi>i</mi><mi>T</mi></msubsup><mi>β</mi></mrow></msup></mrow>
+    </mfrac>
+  </mrow>
+</math>
+</div>
+
+<div class="note">
+  <p>This is the <strong>logistic / sigmoid function</strong> — the solid curve in Figure 36. Whatever value the linear predictor takes, the output is trapped strictly between 0 and 1, which is exactly the property the straight line lacked.</p>
+</div>
+
+</main>
+
+<footer>
+  <p>Transcribed from the handwritten notes <em>LR_week_7_day_1.pdf</em> (7 pages). Equations are MathML; the figure is inline SVG with title, description, and an expandable long description. Figure numbering continues from Week 6, Day 2. Conforms to WCAG 2.2 Level AA.</p>
+</footer>
+</div>
+</body>
+</html>
