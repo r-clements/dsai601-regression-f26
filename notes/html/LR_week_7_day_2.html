@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fitting the Logistic Model: Maximum Likelihood and Gradient Descent — Week 7, Day 2 | DSAI 601</title>
+<meta name="description" content="Accessible class notes on reading the logistic mean response function, the Bernoulli likelihood and log-likelihood, why there is no closed form for beta, and gradient descent — the sign and magnitude of the derivative, the learning rate, what happens when it is too large or too small, and the gradient in two dimensions.">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --muted: #4a4a4a;
+    --rule: #c9c9c9;
+    --accent: #0b4f8a;
+    --accent-bg: #eef4fa;
+    --focus: #0b4f8a;
+    --pop: #a4262c;   /* population / true  — 5.9:1 on white */
+    --est: #5b2d8e;   /* estimate / fitted  — 8.5:1 on white */
+    --err: #8a5000;   /* errors / residuals — 5.1:1 on white */
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #f2f2f2; --muted: #cfcfcf; --rule: #555;
+      --accent: #8ab8e0; --accent-bg: #182430; --focus: #8ab8e0;
+      --pop: #ff9f99; --est: #cbb0ff; --err: #f0b458;
+    }
+    body { background: #131313; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 1.0625rem;
+    line-height: 1.65;
+    color: var(--ink);
+    background: #fff;
+  }
+  @media (prefers-color-scheme: dark) { body { background: #131313; } }
+  .wrap { max-width: 46rem; margin: 0 auto; padding: 1.5rem 1.25rem 5rem; }
+  a { color: var(--accent); }
+  a:focus-visible, summary:focus-visible, :focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+  .skip {
+    position: absolute; left: -9999px; top: 0;
+    background: var(--accent); color: #fff;
+    padding: .75rem 1rem; z-index: 10; text-decoration: none;
+  }
+  .skip:focus { left: .5rem; top: .5rem; }
+  h1 { font-size: 1.85rem; line-height: 1.25; margin: 0 0 .25rem; }
+  h2 { font-size: 1.35rem; line-height: 1.3; margin: 2.5rem 0 .5rem;
+       padding-top: .75rem; border-top: 2px solid var(--rule); }
+  h3 { font-size: 1.1rem; margin: 1.75rem 0 .4rem; }
+  p, li { max-width: 42rem; }
+  .lede { color: var(--muted); margin-top: 0; }
+  nav.toc {
+    background: var(--accent-bg); border: 1px solid var(--rule);
+    border-radius: 8px; padding: 1rem 1.25rem; margin: 2rem 0;
+  }
+  nav.toc h2 { font-size: 1.05rem; margin: 0 0 .5rem; border: 0; padding: 0; }
+  nav.toc ol { margin: 0; padding-left: 1.25rem; }
+  nav.toc li { margin: .3rem 0; }
+  nav.toc a { display: inline-block; min-height: 24px; padding: 2px 0; }
+  table { border-collapse: collapse; margin: 1rem 0; width: 100%; }
+  /* wide tables (long model equations) scroll inside their own box so the
+     page itself never scrolls horizontally -- WCAG 1.4.10 reflow */
+  .tablewrap { overflow-x: auto; margin: 1rem 0; }
+  .tablewrap > table { margin: 0; }
+  caption { text-align: left; font-weight: 600; padding-bottom: .5rem; }
+  th, td { border: 1px solid var(--rule); padding: .5rem .7rem; text-align: left; }
+  thead th { background: var(--accent-bg); }
+  td.hi { font-weight: 700; }
+  figure { margin: 1.5rem 0; }
+  figcaption { font-size: .95rem; color: var(--muted); margin-top: .5rem; }
+  svg { max-width: 100%; height: auto; display: block; }
+  details {
+    border: 1px solid var(--rule); border-radius: 6px;
+    padding: .5rem .85rem; margin: .75rem 0; background: var(--accent-bg);
+  }
+  summary { cursor: pointer; font-weight: 600; min-height: 24px; padding: .25rem 0; }
+  details[open] summary { margin-bottom: .5rem; }
+  math { font-size: 1.15em; }
+  math[display="block"] { margin: 1rem 0; overflow-x: auto; overflow-y: hidden; }
+  .eq { margin: 1.25rem 0; }
+  .note {
+    border-left: 4px solid var(--accent); background: var(--accent-bg);
+    padding: .75rem 1rem; margin: 1.25rem 0; border-radius: 0 6px 6px 0;
+  }
+  .note > :first-child { margin-top: 0; }
+  .note > :last-child { margin-bottom: 0; }
+  .caution { border-left-color: var(--pop); }
+  .tag {
+    display: inline-block; font-size: .8rem; font-weight: 700;
+    letter-spacing: .02em; text-transform: uppercase;
+    border: 1px solid currentColor; border-radius: 4px;
+    padding: 0 .4em; white-space: nowrap;
+  }
+  .tag.warn { color: var(--pop); }
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 2px solid var(--rule);
+           color: var(--muted); font-size: .95rem; }
+  ol.steps { padding-left: 1.4rem; }
+  ol.steps > li { margin: .75rem 0; }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+
+<div class="wrap">
+<header>
+  <p class="lede"><strong>DSAI 601 — Regression</strong> · Fall 2026 · Week 7, Day 2</p>
+  <h1>Fitting the Logistic Model: Maximum Likelihood and Gradient Descent</h1>
+  <p class="lede">Accessible transcription of the handwritten class notes. All equations are marked up in MathML so they can be read by a screen reader, magnified, or rendered in braille. All figures have text descriptions. Annotations written in a second pen colour in the original are reproduced here as labelled callouts and words, so none of their meaning depends on colour.</p>
+</header>
+
+<nav class="toc" aria-labelledby="toc-h">
+  <h2 id="toc-h">On this page</h2>
+  <ol>
+    <li><a href="#logistic">I. Logistic regression, continued</a></li>
+    <li><a href="#mle">II. Parameter estimation</a></li>
+    <li><a href="#noclosed">No closed form</a></li>
+    <li><a href="#gd">III. Gradient descent</a></li>
+    <li><a href="#lr">The learning rate</a></li>
+    <li><a href="#gd2d">Gradient descent in two dimensions</a></li>
+  </ol>
+</nav>
+
+<main id="main">
+
+<h2 id="logistic">I. Logistic regression, continued</h2>
+
+<div class="eq">
+<math display="block" alttext="pi sub i equals one over one plus e to the minus X sub i transpose beta">
+  <mrow>
+    <msub><mi>π</mi><mi>i</mi></msub><mo>=</mo>
+    <mfrac>
+      <mn>1</mn>
+      <mrow><mn>1</mn><mo>+</mo><msup><mi>e</mi><mrow><mo>−</mo><msubsup><mi>X</mi><mi>i</mi><mi>T</mi></msubsup><mi>β</mi></mrow></msup></mrow>
+    </mfrac>
+  </mrow>
+</math>
+</div>
+
+<p>The quantity on the left is the <strong>probability of success</strong>, that is, of <math alttext="y sub i equals 1"><mrow><msub><mi>y</mi><mi>i</mi></msub><mo>=</mo><mn>1</mn></mrow></math>.</p>
+
+<figure>
+<svg viewBox="0 0 560 300" role="img" aria-labelledby="fig37-t fig37-d" xmlns="http://www.w3.org/2000/svg">
+  <title id="fig37-t">The logistic function plotted against the linear predictor</title>
+  <desc id="fig37-d">An S-shaped curve rising from 0 on the left to 1 on the right, plotted against the linear predictor X transpose beta. Dotted guide lines show that the curve passes through one half exactly where the linear predictor is zero.</desc>
+
+  <line x1="60" y1="250" x2="500" y2="250" stroke="currentColor" stroke-width="2"/>
+  <line x1="90" y1="250" x2="90" y2="40" stroke="currentColor" stroke-width="2"/>
+  <text x="96" y="36" font-size="15" fill="currentColor">π</text>
+  <text x="506" y="256" font-size="15" fill="currentColor">Xᵀβ</text>
+
+  <line x1="82" y1="160" x2="90" y2="160" stroke="currentColor" stroke-width="2"/>
+  <text x="76" y="165" font-size="14" fill="currentColor" text-anchor="end">½</text>
+  <line x1="82" y1="70" x2="90" y2="70" stroke="currentColor" stroke-width="2"/>
+  <text x="76" y="75" font-size="14" fill="currentColor" text-anchor="end">1</text>
+
+  <!-- guide lines meeting at (0, 1/2) -->
+  <g stroke="var(--accent)" stroke-width="2" stroke-dasharray="4 4">
+    <line x1="90" y1="160" x2="290" y2="160"/>
+    <line x1="290" y1="160" x2="290" y2="250"/>
+  </g>
+  <line x1="290" y1="250" x2="290" y2="258" stroke="currentColor" stroke-width="2"/>
+  <text x="290" y="274" font-size="14" fill="currentColor" text-anchor="middle">0</text>
+
+  <polyline fill="none" stroke="var(--pop)" stroke-width="3"
+    points="110,249.6 125,249.3 140,248.8 155,248 170,246.8 185,244.7 200,241.5 215,236.3 230,228.5 245,217.2 260,201.6 275,182 290,160 305,138 320,118.4 335,102.8 350,91.5 365,83.7 380,78.5 395,75.3 410,73.2 425,72 440,71.2 455,70.7 470,70.4"/>
+</svg>
+<figcaption>Figure 37. The logistic function squeezes the whole real line into <math alttext="the open interval from 0 to 1"><mrow><mo>(</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo>)</mo></mrow></math>, crossing one half at the point where the linear predictor is zero.</figcaption>
+</figure>
+<details>
+  <summary>Long description of Figure 37</summary>
+  <p>The horizontal axis is the linear predictor <math alttext="X transpose beta"><mrow><msup><mi>X</mi><mi>T</mi></msup><mi>β</mi></mrow></math>, with a single tick labelled 0 near the middle. The vertical axis is <math alttext="pi"><mi>π</mi></math>, ticked at one half and at 1. A smooth S-shaped curve enters at the lower left, hugging zero, rises steeply through the middle of the plot, and flattens out just below 1 on the right. Dotted guide lines run from the one-half tick across to the curve and then straight down to the 0 tick, showing that the crossing happens exactly there.</p>
+  <p>The curve never actually reaches 0 or 1 — it only approaches them — which is what guarantees that a logistic model always returns a usable probability.</p>
+</details>
+
+<div class="tablewrap">
+<table>
+  <caption>Three readings of the curve</caption>
+  <thead>
+    <tr><th scope="col">When the linear predictor is</th><th scope="col">the probability is</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row"><math alttext="X sub i transpose beta equals 0"><mrow><msubsup><mi>X</mi><mi>i</mi><mi>T</mi></msubsup><mi>β</mi><mo>=</mo><mn>0</mn></mrow></math></th>
+      <td><math alttext="pi sub i equals one half"><mrow><msub><mi>π</mi><mi>i</mi></msub><mo>=</mo><mfrac><mn>1</mn><mn>2</mn></mfrac></mrow></math></td>
+    </tr>
+    <tr>
+      <th scope="row"><math alttext="X sub i transpose beta tends to minus infinity"><mrow><msubsup><mi>X</mi><mi>i</mi><mi>T</mi></msubsup><mi>β</mi><mo>→</mo><mo>−</mo><mi>∞</mi></mrow></math></th>
+      <td><math alttext="pi sub i tends to 0"><mrow><msub><mi>π</mi><mi>i</mi></msub><mo>→</mo><mn>0</mn></mrow></math></td>
+    </tr>
+    <tr>
+      <th scope="row"><math alttext="X sub i transpose beta tends to infinity"><mrow><msubsup><mi>X</mi><mi>i</mi><mi>T</mi></msubsup><mi>β</mi><mo>→</mo><mi>∞</mi></mrow></math></th>
+      <td><math alttext="pi sub i tends to 1"><mrow><msub><mi>π</mi><mi>i</mi></msub><mo>→</mo><mn>1</mn></mrow></math></td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="mle">II. Parameter estimation</h2>
+
+<p>We need <strong>maximum likelihood estimation</strong>. Start from the Bernoulli probability mass function, written as a single expression:</p>
+
+<div class="tablewrap">
+<table>
+  <caption>The two cases the single formula has to cover</caption>
+  <thead>
+    <tr><th scope="col">Value</th><th scope="col">Probability</th></tr>
+  </thead>
+  <tbody>
+    <tr><th scope="row">1</th><td><math alttext="pi sub i"><msub><mi>π</mi><mi>i</mi></msub></math></td></tr>
+    <tr><th scope="row">0</th><td><math alttext="one minus pi sub i"><mrow><mn>1</mn><mo>−</mo><msub><mi>π</mi><mi>i</mi></msub></mrow></math></td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="eq">
+<math display="block" alttext="the probability that Y sub i equals y sub i equals pi sub i to the power y sub i, times one minus pi sub i, to the power one minus y sub i">
+  <mrow>
+    <mi>P</mi><mo>(</mo><msub><mi>Y</mi><mi>i</mi></msub><mo>=</mo><msub><mi>y</mi><mi>i</mi></msub><mo>)</mo><mo>=</mo>
+    <msubsup><mi>π</mi><mi>i</mi><msub><mi>y</mi><mi>i</mi></msub></msubsup>
+    <msup><mrow><mo>(</mo><mn>1</mn><mo>−</mo><msub><mi>π</mi><mi>i</mi></msub><mo>)</mo></mrow><mrow><mn>1</mn><mo>−</mo><msub><mi>y</mi><mi>i</mi></msub></mrow></msup>
+  </mrow>
+</math>
+</div>
+
+<div class="note">
+  <p>The exponents act as switches. Put <math alttext="y sub i equals 1"><mrow><msub><mi>y</mi><mi>i</mi></msub><mo>=</mo><mn>1</mn></mrow></math> and the second factor becomes <math alttext="anything to the power zero, which is one"><mrow><msup><mrow><mo>(</mo><mo>·</mo><mo>)</mo></mrow><mn>0</mn></msup><mo>=</mo><mn>1</mn></mrow></math>, leaving <math alttext="pi sub i"><msub><mi>π</mi><mi>i</mi></msub></math>; put <math alttext="y sub i equals 0"><mrow><msub><mi>y</mi><mi>i</mi></msub><mo>=</mo><mn>0</mn></mrow></math> and the first factor switches off instead, leaving <math alttext="one minus pi sub i"><mrow><mn>1</mn><mo>−</mo><msub><mi>π</mi><mi>i</mi></msub></mrow></math>. One formula, both rows of the table.</p>
+</div>
+
+<p>Observations are independent, so the likelihood is the product:</p>
+
+<div class="eq">
+<math display="block" alttext="L of beta equals the product from i equals 1 to n of pi sub i to the power y sub i, times one minus pi sub i to the power one minus y sub i">
+  <mrow>
+    <mi>L</mi><mo>(</mo><mi>β</mi><mo>)</mo><mo>=</mo>
+    <munderover><mo>∏</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover>
+    <msubsup><mi>π</mi><mi>i</mi><msub><mi>y</mi><mi>i</mi></msub></msubsup>
+    <msup><mrow><mo>(</mo><mn>1</mn><mo>−</mo><msub><mi>π</mi><mi>i</mi></msub><mo>)</mo></mrow><mrow><mn>1</mn><mo>−</mo><msub><mi>y</mi><mi>i</mi></msub></mrow></msup>
+  </mrow>
+</math>
+</div>
+
+<p>and taking logs turns the product into a sum:</p>
+
+<div class="eq">
+<math display="block" alttext="ell of beta equals the sum from i equals 1 to n of the natural log of pi sub i to the y sub i times one minus pi sub i to the one minus y sub i, which equals the sum from i equals 1 to n of, y sub i times the log of pi sub i, plus one minus y sub i times the log of one minus pi sub i">
+  <mtable columnalign="right center left">
+    <mtr>
+      <mtd><mrow><mi>ℓ</mi><mo>(</mo><mi>β</mi><mo>)</mo></mrow></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover>
+          <mi>ln</mi><mrow><mo>(</mo>
+            <msubsup><mi>π</mi><mi>i</mi><msub><mi>y</mi><mi>i</mi></msub></msubsup>
+            <msup><mrow><mo>(</mo><mn>1</mn><mo>−</mo><msub><mi>π</mi><mi>i</mi></msub><mo>)</mo></mrow><mrow><mn>1</mn><mo>−</mo><msub><mi>y</mi><mi>i</mi></msub></mrow></msup>
+          <mo>)</mo></mrow>
+        </mrow>
+      </mtd>
+    </mtr>
+    <mtr>
+      <mtd></mtd>
+      <mtd><mo>=</mo></mtd>
+      <mtd>
+        <mrow>
+          <munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover>
+          <mo>[</mo>
+          <msub><mi>y</mi><mi>i</mi></msub><mi>ln</mi><msub><mi>π</mi><mi>i</mi></msub>
+          <mo>+</mo>
+          <mo>(</mo><mn>1</mn><mo>−</mo><msub><mi>y</mi><mi>i</mi></msub><mo>)</mo>
+          <mi>ln</mi><mo>(</mo><mn>1</mn><mo>−</mo><msub><mi>π</mi><mi>i</mi></msub><mo>)</mo>
+          <mo>]</mo>
+        </mrow>
+      </mtd>
+    </mtr>
+  </mtable>
+</math>
+</div>
+
+<p>Maximising <math alttext="ell of beta"><mrow><mi>ℓ</mi><mo>(</mo><mi>β</mi><mo>)</mo></mrow></math> is the same as minimising <math alttext="minus ell of beta"><mrow><mo>−</mo><mi>ℓ</mi><mo>(</mo><mi>β</mi><mo>)</mo></mrow></math>, and the rest of the session works with the negative version because optimisers are written to go downhill.</p>
+
+<h2 id="noclosed">No closed form</h2>
+
+<p>Differentiating the negative log-likelihood gives</p>
+
+<div class="eq">
+<math display="block" alttext="the derivative of minus ell of beta equals minus X transpose, times Y minus pi">
+  <mrow>
+    <mfrac><mrow><mo>∂</mo><mo>[</mo><mo>−</mo><mi>ℓ</mi><mo>(</mo><mi>β</mi><mo>)</mo><mo>]</mo></mrow><mrow><mo>∂</mo><mi>β</mi></mrow></mfrac>
+    <mo>=</mo>
+    <mo>−</mo><msup><mi>X</mi><mi>T</mi></msup><mo>(</mo><mi>Y</mi><mo>−</mo><mi>π</mi><mo>)</mo>
+  </mrow>
+</math>
+</div>
+
+<p>where <math alttext="Y"><mi>Y</mi></math> is the <math alttext="n by 1"><mrow><mi>n</mi><mo>×</mo><mn>1</mn></mrow></math> vector of observed 0s and 1s and <math alttext="pi"><mi>π</mi></math> is the <math alttext="n by 1"><mrow><mi>n</mi><mo>×</mo><mn>1</mn></mrow></math> vector of fitted probabilities <math alttext="pi 1 through pi n"><mrow><msub><mi>π</mi><mn>1</mn></msub><mo>,</mo><mo>…</mo><mo>,</mo><msub><mi>π</mi><mi>n</mi></msub></mrow></math>.</p>
+
+<div class="note caution">
+  <p><span class="tag warn">The problem</span> There is <strong>no closed-form solution for <math alttext="beta"><mi>β</mi></math></strong>. Setting that derivative to zero gives equations in which <math alttext="beta"><mi>β</mi></math> is buried inside <math alttext="pi"><mi>π</mi></math>, and they cannot be unpicked. We must use a <strong>numerical optimization method</strong>.</p>
+</div>
+
+<p>Two named methods appear in the notes:</p>
+
+<ul>
+  <li><strong>Newton–Raphson method</strong></li>
+  <li><strong>Iteratively Reweighted Least Squares (IRLS)</strong></li>
+</ul>
+
+<div class="note">
+  <p>Contrast this with ordinary least squares, where setting the derivative to zero gave the normal equations and <math alttext="beta hat equals X transpose X inverse X transpose Y"><mrow><mover><mi>β</mi><mo>^</mo></mover><mo>=</mo><msup><mrow><mo>(</mo><msup><mi>X</mi><mi>T</mi></msup><mi>X</mi><mo>)</mo></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup><msup><mi>X</mi><mi>T</mi></msup><mi>Y</mi></mrow></math> straight away. That convenience is gone here.</p>
+</div>
+
+<h2 id="gd">III. Gradient descent</h2>
+
+<figure>
+<svg viewBox="0 0 520 300" role="img" aria-labelledby="fig38-t fig38-d" xmlns="http://www.w3.org/2000/svg">
+  <title id="fig38-t">Four gradient descent steps running downhill to the minimum</title>
+  <desc id="fig38-d">A convex bowl-shaped curve of the negative log-likelihood against beta one. Four marked points start high on the left wall and move right and down, each step shorter than the last, closing in on the lowest point of the bowl.</desc>
+
+  <line x1="60" y1="250" x2="500" y2="250" stroke="currentColor" stroke-width="2"/>
+  <line x1="70" y1="250" x2="70" y2="40" stroke="currentColor" stroke-width="2"/>
+  <text x="76" y="36" font-size="14" fill="currentColor">−ℓ(β₁)</text>
+  <text x="506" y="256" font-size="15" fill="currentColor">β₁</text>
+
+  <polyline fill="none" stroke="currentColor" stroke-width="2.5"
+    points="79.6,69.2 91.6,89.4 103.6,108.2 115.6,125.7 127.6,141.8 139.6,156.5 151.6,169.8 163.6,181.8 175.6,192.4 187.6,201.6 199.6,209.4 211.6,215.9 223.6,221 235.6,224.7 247.6,227 259.6,228 271.6,227.6 283.6,225.8 295.6,222.6 307.6,218.1 319.6,212.2 331.6,204.9 343.6,196.2 355.6,186.2 367.6,174.8 379.6,162 391.6,147.8 403.6,132.3 415.6,115.4 427.6,97.1 439.6,77.4 451.6,56.4"/>
+
+  <!-- the four steps -->
+  <polyline fill="none" stroke="var(--pop)" stroke-width="2" stroke-dasharray="5 4"
+    points="98.8,100.8 180.4,196.2 221.2,220.1 241.6,226 251.8,227.5"/>
+  <g fill="var(--pop)">
+    <circle cx="98.8" cy="100.8" r="4.5"/>
+    <circle cx="180.4" cy="196.2" r="4.5"/>
+    <circle cx="221.2" cy="220.1" r="4.5"/>
+    <circle cx="241.6" cy="226" r="4.5"/>
+    <circle cx="251.8" cy="227.5" r="4.5"/>
+  </g>
+  <g font-size="13" fill="var(--pop)">
+    <text x="106" y="94">step 1</text>
+    <text x="188" y="190">step 2</text>
+    <text x="232" y="210">step 3</text>
+    <text x="262" y="192">step 4</text>
+  </g>
+  <line x1="268" y1="196" x2="254" y2="224" stroke="var(--pop)" stroke-width="1.2"/>
+
+  <line x1="330" y1="258" x2="266" y2="234" stroke="var(--accent)" stroke-width="1.5"/>
+  <text x="336" y="262" font-size="14" fill="var(--accent)">minimum of −ℓ(β₁), at β̂₁</text>
+</svg>
+<figcaption>Figure 38. Each step moves downhill, and the steps shorten automatically as the slope flattens out near the bottom.</figcaption>
+</figure>
+<details>
+  <summary>Long description of Figure 38</summary>
+  <p>A convex, bowl-shaped curve showing <math alttext="minus ell of beta one"><mrow><mo>−</mo><mi>ℓ</mi><mo>(</mo><msub><mi>β</mi><mn>1</mn></msub><mo>)</mo></mrow></math> against <math alttext="beta one"><msub><mi>β</mi><mn>1</mn></msub></math>. Five dots sit on the curve, joined by a dashed path and labelled step 1 through step 4. The first dot is high on the left wall; each subsequent dot is further right and lower down, and the gaps between them shrink markedly — the first step covers most of the distance and the fourth is barely visible. The path converges on the lowest point of the bowl, marked as the minimum, which sits at <math alttext="beta hat one"><msub><mover><mi>β</mi><mo>^</mo></mover><mn>1</mn></msub></math> on the horizontal axis.</p>
+  <p>The shrinking is not a choice, it is automatic: each step is proportional to the slope, and the slope goes to zero at the bottom. These are the actual iterates of <math alttext="beta at t plus one equals beta at t minus alpha times the derivative"><mrow><msup><mi>β</mi><mrow><mo>(</mo><mi>t</mi><mo>+</mo><mn>1</mn><mo>)</mo></mrow></msup><mo>=</mo><msup><mi>β</mi><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></msup><mo>−</mo><mi>α</mi><msup><mi>f</mi><mo>′</mo></msup></mrow></math> on a quadratic, not a freehand sketch.</p>
+</details>
+
+<p>The derivative carries two pieces of information, and gradient descent uses both.</p>
+
+<div class="tablewrap">
+<table>
+  <caption>First piece: the <strong>sign</strong> tells us the direction to move</caption>
+  <thead>
+    <tr><th scope="col">If the derivative is</th><th scope="col">then move</th></tr>
+  </thead>
+  <tbody>
+    <tr><th scope="row">negative</th><td>to the right (increase <math alttext="beta"><mi>β</mi></math>)</td></tr>
+    <tr><th scope="row">positive</th><td>to the left (decrease <math alttext="beta"><mi>β</mi></math>)</td></tr>
+    <tr><th scope="row">zero</th><td class="hi">stop</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="lr">The learning rate</h2>
+
+<p>Second piece: the derivative also has a <strong>magnitude</strong>, and we use it to help adjust <math alttext="beta"><mi>β</mi></math>. For better control of the step size, introduce <math alttext="alpha"><mi>α</mi></math>, the <strong>learning rate</strong>:</p>
+
+<div class="eq">
+<math display="block" alttext="beta one at step t plus one equals beta one at step t, minus alpha times the derivative with respect to beta one of minus ell of beta one">
+  <mrow>
+    <msubsup><mi>β</mi><mn>1</mn><mrow><mo>(</mo><mi>t</mi><mo>+</mo><mn>1</mn><mo>)</mo></mrow></msubsup>
+    <mo>=</mo>
+    <msubsup><mi>β</mi><mn>1</mn><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></msubsup>
+    <mo>−</mo>
+    <mi>α</mi>
+    <mfrac><mi>d</mi><mrow><mi>d</mi><msub><mi>β</mi><mn>1</mn></msub></mrow></mfrac>
+    <mrow><mo>[</mo><mo>−</mo><mi>ℓ</mi><mo>(</mo><msub><mi>β</mi><mn>1</mn></msub><mo>)</mo><mo>]</mo></mrow>
+  </mrow>
+</math>
+</div>
+
+<figure>
+<svg viewBox="0 0 540 300" role="img" aria-labelledby="fig39-t fig39-d" xmlns="http://www.w3.org/2000/svg">
+  <title id="fig39-t">Two ways the learning rate goes wrong</title>
+  <desc id="fig39-d">Two bowl-shaped curves side by side. On the left the iterates bounce from wall to wall, each swing wider than the last, so the method diverges. On the right the iterates creep down one wall in steps so small that the minimum is nowhere in sight.</desc>
+
+  <!-- LEFT PANEL: alpha too large -->
+  <line x1="30" y1="250" x2="250" y2="250" stroke="currentColor" stroke-width="2"/>
+  <line x1="36" y1="250" x2="36" y2="40" stroke="currentColor" stroke-width="2"/>
+  <text x="42" y="36" font-size="13" fill="currentColor">−ℓ(β₁)</text>
+  <text x="256" y="256" font-size="14" fill="currentColor">β₁</text>
+  <polyline fill="none" stroke="currentColor" stroke-width="2.5"
+    points="40,69.3 48,94 56,116.6 64,137.2 72,155.7 80,172.2 88,186.6 96,198.9 104,209.2 112,217.4 120,223.6 128,227.7 136,229.7 144,229.7 152,227.7 160,223.6 168,217.4 176,209.2 184,198.9 192,186.6 200,172.2 208,155.7 216,137.2 224,116.6 232,94 240,69.3"/>
+  <polyline fill="none" stroke="var(--pop)" stroke-width="2"
+    points="160,223.6 116,220.7 168.8,216.7 105.4,210.8 181.5,202.4 90.2,190.2 199.7,172.7"/>
+  <g fill="var(--pop)">
+    <circle cx="160" cy="223.6" r="3.5"/><circle cx="116" cy="220.7" r="3.5"/>
+    <circle cx="168.8" cy="216.7" r="3.5"/><circle cx="105.4" cy="210.8" r="3.5"/>
+    <circle cx="181.5" cy="202.4" r="3.5"/><circle cx="90.2" cy="190.2" r="3.5"/>
+    <circle cx="199.7" cy="172.7" r="3.5"/>
+  </g>
+  <text x="140" y="276" font-size="14" fill="var(--pop)" text-anchor="middle">α too large: diverges</text>
+
+  <!-- RIGHT PANEL: alpha too small -->
+  <line x1="290" y1="250" x2="510" y2="250" stroke="currentColor" stroke-width="2"/>
+  <line x1="296" y1="250" x2="296" y2="40" stroke="currentColor" stroke-width="2"/>
+  <text x="302" y="36" font-size="13" fill="currentColor">−ℓ(β₁)</text>
+  <text x="516" y="256" font-size="14" fill="currentColor">β₁</text>
+  <polyline fill="none" stroke="currentColor" stroke-width="2.5"
+    points="300,69.3 308,94 316,116.6 324,137.2 332,155.7 340,172.2 348,186.6 356,198.9 364,209.2 372,217.4 380,223.6 388,227.7 396,229.7 404,229.7 412,227.7 420,223.6 428,217.4 436,209.2 444,198.9 452,186.6 460,172.2 468,155.7 476,137.2 484,116.6 492,94 500,69.3"/>
+  <polyline fill="none" stroke="var(--est)" stroke-width="2"
+    points="492,94 488.3,104.7 484.8,114.5 481.4,123.5 478.1,131.9 475,139.6"/>
+  <g fill="var(--est)">
+    <circle cx="492" cy="94" r="3.5"/><circle cx="488.3" cy="104.7" r="3.5"/>
+    <circle cx="484.8" cy="114.5" r="3.5"/><circle cx="481.4" cy="123.5" r="3.5"/>
+    <circle cx="478.1" cy="131.9" r="3.5"/><circle cx="475" cy="139.6" r="3.5"/>
+  </g>
+  <text x="400" y="276" font-size="14" fill="var(--est)" text-anchor="middle">α too small: too slow</text>
+</svg>
+<figcaption>Figure 39. The learning rate has to be tuned: too big and the iterates overshoot and fly apart, too small and they never arrive.</figcaption>
+</figure>
+<details>
+  <summary>Long description of Figure 39</summary>
+  <p>Two panels, each showing the same bowl-shaped <math alttext="minus ell of beta one"><mrow><mo>−</mo><mi>ℓ</mi><mo>(</mo><msub><mi>β</mi><mn>1</mn></msub><mo>)</mo></mrow></math> curve.</p>
+  <p><strong>Left, labelled "α too large: diverges".</strong> Seven dots are joined by a zig-zag that crosses from one wall of the bowl to the other and back. Each crossing lands higher up the opposite wall than the previous one did, so the path climbs away from the minimum instead of settling into it. The step overshoots the bottom every time, and overshoots by more each time.</p>
+  <p><strong>Right, labelled "α too small: too slow".</strong> Six dots sit high on the right-hand wall, separated by gaps so small the dots nearly touch. The path inches downward and would need a very large number of further steps to reach the bottom of the bowl, which is far away at the centre.</p>
+  <p>Both panels show genuine gradient descent runs on a quadratic — the left uses a learning rate above the stability threshold, the right one far below the useful range.</p>
+</details>
+
+<h2 id="gd2d">Gradient descent in two dimensions</h2>
+
+<p><strong>Direction.</strong> With more than one parameter we have more options, and we want the <strong>steepest descent</strong>. The individual slopes are the partial derivatives <math alttext="partial with respect to beta sub i of minus ell of beta"><mrow><mfrac><mo>∂</mo><mrow><mo>∂</mo><msub><mi>β</mi><mi>i</mi></msub></mrow></mfrac><mo>[</mo><mo>−</mo><mi>ℓ</mi><mo>(</mo><mi>β</mi><mo>)</mo><mo>]</mo></mrow></math>, and combining them into a vector gives the <strong>gradient</strong> <math alttext="nabla of minus ell of beta"><mrow><mo>∇</mo><mo>[</mo><mo>−</mo><mi>ℓ</mi><mo>(</mo><mi>β</mi><mo>)</mo><mo>]</mo></mrow></math>:</p>
+
+<div class="eq">
+<math display="block" alttext="the gradient is the column vector whose entries are the partial derivative with respect to beta one of minus ell of beta at step t, and the partial derivative with respect to beta two of minus ell of beta at step t">
+  <mrow>
+    <mo>∇</mo><mrow><mo>[</mo><mo>−</mo><mi>ℓ</mi><mo>(</mo><mi>β</mi><mo>)</mo><mo>]</mo></mrow>
+    <mo>=</mo>
+    <mrow><mo>(</mo>
+    <mtable>
+      <mtr><mtd>
+        <mrow><mfrac><mo>∂</mo><mrow><mo>∂</mo><msub><mi>β</mi><mn>1</mn></msub></mrow></mfrac>
+        <mo>[</mo><mo>−</mo><mi>ℓ</mi><mo>(</mo><msup><mi>β</mi><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></msup><mo>)</mo><mo>]</mo></mrow>
+      </mtd></mtr>
+      <mtr><mtd>
+        <mrow><mfrac><mo>∂</mo><mrow><mo>∂</mo><msub><mi>β</mi><mn>2</mn></msub></mrow></mfrac>
+        <mo>[</mo><mo>−</mo><mi>ℓ</mi><mo>(</mo><msup><mi>β</mi><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></msup><mo>)</mo><mo>]</mo></mrow>
+      </mtd></mtr>
+    </mtable>
+    <mo>)</mo></mrow>
+  </mrow>
+</math>
+</div>
+
+<figure>
+<svg viewBox="0 0 420 300" role="img" aria-labelledby="fig40-t fig40-d" xmlns="http://www.w3.org/2000/svg">
+  <title id="fig40-t">The gradient as a direction in parameter space</title>
+  <desc id="fig40-d">Axes labelled beta one and beta two. A single arrow runs from the origin to the point one across and two up, with dotted lines showing its two components. The arrow is the gradient vector.</desc>
+
+  <line x1="60" y1="250" x2="360" y2="250" stroke="currentColor" stroke-width="2"/>
+  <line x1="150" y1="285" x2="150" y2="50" stroke="currentColor" stroke-width="2"/>
+  <text x="366" y="256" font-size="15" fill="currentColor">β₁</text>
+  <text x="156" y="46" font-size="15" fill="currentColor">β₂</text>
+
+  <g stroke="currentColor" stroke-width="1.5">
+    <line x1="195" y1="250" x2="195" y2="256"/><line x1="240" y1="250" x2="240" y2="256"/><line x1="285" y1="250" x2="285" y2="256"/>
+    <line x1="144" y1="205" x2="150" y2="205"/><line x1="144" y1="160" x2="150" y2="160"/><line x1="144" y1="115" x2="150" y2="115"/>
+  </g>
+  <g font-size="13" fill="currentColor">
+    <text x="195" y="270" text-anchor="middle">1</text><text x="240" y="270" text-anchor="middle">2</text><text x="285" y="270" text-anchor="middle">3</text>
+    <text x="140" y="210" text-anchor="end">1</text><text x="140" y="165" text-anchor="end">2</text><text x="140" y="120" text-anchor="end">3</text>
+  </g>
+
+  <!-- components -->
+  <g stroke="var(--pop)" stroke-width="1.8" stroke-dasharray="4 4">
+    <line x1="150" y1="250" x2="195" y2="250"/>
+    <line x1="195" y1="250" x2="195" y2="160"/>
+  </g>
+  <!-- the gradient vector itself -->
+  <line x1="150" y1="250" x2="193" y2="164" stroke="var(--pop)" stroke-width="3"/>
+  <polygon points="195,160 188.5,173 198.5,168" fill="var(--pop)"/>
+  <circle cx="150" cy="250" r="4" fill="var(--pop)"/>
+  <text x="206" y="150" font-size="14" fill="var(--pop)">gradient = (1, 2)</text>
+</svg>
+<figcaption>Figure 40. In two dimensions the gradient is a single arrow in <math alttext="beta"><mi>β</mi></math>-space; gradient descent steps against it.</figcaption>
+</figure>
+<details>
+  <summary>Long description of Figure 40</summary>
+  <p>A pair of axes, <math alttext="beta one"><msub><mi>β</mi><mn>1</mn></msub></math> across and <math alttext="beta two"><msub><mi>β</mi><mn>2</mn></msub></math> up, each ticked at 1, 2 and 3. A solid arrow runs from the origin up and to the right, ending at the point 1 across and 2 up, and is labelled "gradient = (1, 2)". Two dotted segments trace its components: one along the horizontal axis out to 1, then one vertically up to 2.</p>
+  <p>The point of the picture is that the two partial derivatives are not two separate answers — stacked into a vector they define one direction. Gradient descent moves <em>against</em> that arrow, which is the direction of steepest descent.</p>
+</details>
+
+<h3 id="vanilla">Vanilla gradient descent</h3>
+
+<div class="eq">
+<math display="block" alttext="beta at step t plus one equals beta at step t, minus alpha times the gradient of minus ell of beta at step t">
+  <mrow>
+    <msup><mi>β</mi><mrow><mo>(</mo><mi>t</mi><mo>+</mo><mn>1</mn><mo>)</mo></mrow></msup>
+    <mo>=</mo>
+    <msup><mi>β</mi><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></msup>
+    <mo>−</mo>
+    <mi>α</mi>
+    <mo>∇</mo><mrow><mo>[</mo><mo>−</mo><mi>ℓ</mi><mo>(</mo><msup><mi>β</mi><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></msup><mo>)</mo><mo>]</mo></mrow>
+  </mrow>
+</math>
+</div>
+
+<div class="note">
+  <p>And that gradient is the quantity from earlier in the session:</p>
+  <div class="eq">
+  <math display="block" alttext="the gradient of minus ell of beta equals minus X transpose times Y minus pi">
+    <mrow>
+      <mo>∇</mo><mrow><mo>[</mo><mo>−</mo><mi>ℓ</mi><mo>(</mo><mi>β</mi><mo>)</mo><mo>]</mo></mrow>
+      <mo>=</mo>
+      <mo>−</mo><msup><mi>X</mi><mi>T</mi></msup><mo>(</mo><mi>Y</mi><mo>−</mo><mi>π</mi><mo>)</mo>
+    </mrow>
+  </math>
+  </div>
+  <p>so every step is computable even though the equation <math alttext="X transpose times Y minus pi equals 0"><mrow><msup><mi>X</mi><mi>T</mi></msup><mo>(</mo><mi>Y</mi><mo>−</mo><mi>π</mi><mo>)</mo><mo>=</mo><mn>0</mn></mrow></math> cannot be solved in closed form. Notice the shape of <math alttext="Y minus pi"><mrow><mi>Y</mi><mo>−</mo><mi>π</mi></mrow></math>: observed minus fitted, the same residual pattern that drives the normal equations in ordinary least squares.</p>
+</div>
+
+</main>
+
+<footer>
+  <p>Transcribed from the handwritten notes <em>LR_week_7_day_2.pdf</em> (4 pages). Equations are MathML; figures are inline SVG with title, description, and an expandable long description. Figure numbering continues from Week 7, Day 1. Conforms to WCAG 2.2 Level AA.</p>
+</footer>
+</div>
+</body>
+</html>
